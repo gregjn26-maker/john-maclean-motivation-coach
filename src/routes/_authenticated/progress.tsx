@@ -160,9 +160,11 @@ function ProgressPage() {
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
       <AppHeader />
-      <div className="mx-auto max-w-xl px-5 pt-5 space-y-5">
-        <h1 className="text-xl font-semibold text-brand-navy">My Progress</h1>
+      <div className="mx-auto max-w-xl lg:max-w-6xl px-5 pt-5 space-y-5">
+        <h1 className="text-xl lg:text-2xl font-semibold text-brand-navy">My Progress</h1>
 
+        <div className="lg:grid lg:grid-cols-2 lg:gap-5 space-y-5 lg:space-y-0">
+          <div className="space-y-5 lg:min-w-0">
         {/* Stat tiles */}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-brand-orange text-white p-5">
