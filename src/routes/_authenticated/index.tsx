@@ -187,19 +187,28 @@ function HomePage() {
     try {
       const stone_statuses = (bigGoal?.stones ?? [])
         .map((s) => {
-          const measurable = typeof s.target === "number" && s.target > 0;
-          if (measurable) {
+          const metric = stoneMetric(s);
+          if (metric === "count") {
             const raw = (stoneAmounts[s.text] ?? "").trim();
             if (raw === "") return null;
             const n = Number(raw);
             if (!Number.isFinite(n) || n < 0) return null;
             return { text: s.text, worked: n > 0, amount: n };
           }
+          if (metric === "rate") {
+            const rawA = (stoneAchieved[s.text] ?? "").trim();
+            const rawT = (stoneTotals[s.text] ?? "").trim();
+            if (rawA === "" && rawT === "") return null;
+            const a = Number(rawA);
+            const t = Number(rawT);
+            if (!Number.isFinite(a) || a < 0 || !Number.isFinite(t) || t < 0) return null;
+            return { text: s.text, worked: a > 0, achieved: a, total: t };
+          }
           const tap = stoneTaps[s.text];
           if (tap !== true && tap !== false) return null;
           return { text: s.text, worked: tap };
         })
-        .filter((x): x is { text: string; worked: boolean; amount?: number } => x !== null);
+        .filter((x): x is { text: string; worked: boolean; amount?: number; achieved?: number; total?: number } => x !== null);
       const summary = { goals, wins, misses };
       const result = await submit({ data: { ...summary, stone_statuses, overall_rating: rating } });
       setReply(result.reply);
@@ -210,9 +219,18 @@ function HomePage() {
       setRating("");
       const clearedTaps: Record<string, boolean | null> = {};
       const clearedAmts: Record<string, string> = {};
-      (bigGoal?.stones ?? []).forEach((s) => { clearedTaps[s.text] = null; clearedAmts[s.text] = ""; });
+      const clearedAch: Record<string, string> = {};
+      const clearedTot: Record<string, string> = {};
+      (bigGoal?.stones ?? []).forEach((s) => {
+        clearedTaps[s.text] = null;
+        clearedAmts[s.text] = "";
+        clearedAch[s.text] = "";
+        clearedTot[s.text] = "";
+      });
       setStoneTaps(clearedTaps);
       setStoneAmounts(clearedAmts);
+      setStoneAchieved(clearedAch);
+      setStoneTotals(clearedTot);
       loadHistory();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
