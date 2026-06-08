@@ -21,9 +21,22 @@ const CheckInInput = z.object({
 const PRIMARY_MODEL = "claude-opus-4-7";
 const FALLBACK_MODEL = "claude-sonnet-4-6";
 
-interface StoneStatus { text: string; worked: boolean; amount?: number | null }
+interface StoneStatus { text: string; worked: boolean; amount?: number | null; achieved?: number | null; total?: number | null }
 
-interface StoneMeta { text: string; target?: number | null; unit?: string; cadence?: string }
+interface StoneMeta {
+  text: string;
+  target?: number | null;
+  unit?: string;
+  cadence?: string;
+  metric?: "count" | "rate" | "habit";
+  numerator_label?: string;
+  denominator_label?: string;
+}
+
+function getMetric(s: StoneMeta): "count" | "rate" | "habit" {
+  if (s.metric === "count" || s.metric === "rate" || s.metric === "habit") return s.metric;
+  return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
+}
 
 interface PastCheckIn {
   check_in_date: string;
