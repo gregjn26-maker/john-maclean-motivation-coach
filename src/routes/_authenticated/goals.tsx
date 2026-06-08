@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, X } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
 
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
@@ -99,18 +100,16 @@ function GoalsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center gap-3 px-5 py-3">
-          <Link to="/" className="text-muted-foreground hover:text-foreground" aria-label="Back">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-base font-semibold text-foreground leading-tight">My Goals</h1>
-            <p className="text-xs text-muted-foreground leading-tight">Your big goal and the stones that get you there</p>
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen bg-brand-bg pb-24">
+      <AppHeader
+        rightExtra={
+          <Link to="/" className="text-xs text-white/80 hover:text-white">Back</Link>
+        }
+      />
+      <div className="mx-auto max-w-xl px-5 pt-5 mb-3">
+        <h1 className="text-xl font-semibold text-brand-navy leading-tight">My Goals</h1>
+        <p className="text-sm text-brand-muted">Your big goal and the stones that get you there</p>
+      </div>
 
       <div className="mx-auto max-w-xl px-5 pt-5">
         {loading ? (
