@@ -66,7 +66,12 @@ function buildUserMessage(
   past: PastCheckIn[],
   bigGoal: BigGoalContext | null,
   nudgeCandidate: string | null,
+  firstName: string,
 ) {
+  const nameBlock = firstName
+    ? `THIS USER'S FIRST NAME: ${firstName}\nAddress them by their first name naturally — don't overuse it.\n\n---\n\n`
+    : "";
+
   let goalBlock = "";
   if (bigGoal && (bigGoal.big_goal || (bigGoal.stones && bigGoal.stones.length > 0))) {
     goalBlock = "THIS USER'S BIG GOAL:\n";
@@ -77,7 +82,7 @@ function buildUserMessage(
       bigGoal.stones.forEach((s, i) => {
         const streak = untouchedStreak(s.text, past);
         const todayMatch = today.stone_statuses.find((t) => normaliseText(t.text) === normaliseText(s.text));
-        const status = todayMatch ? (todayMatch.worked ? "WORKED ON today" : "did NOT work on today") : "no answer today";
+        const status = todayMatch ? (todayMatch.worked ? "WORKED ON since last check-in" : "did NOT work on since last check-in") : "no answer this check-in";
         const nudged = recentlyNudged(s.text, past) ? "  [you already nudged this step in the last 2 check-ins]" : "";
         goalBlock += `  ${i + 1}. ${s.text} — ${status}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
       });
@@ -105,26 +110,30 @@ function buildUserMessage(
     `- If a step is neglected, nudge ONLY the single most neglected one — never list several.\n` +
     `- Do not repeat a nudge on a step you already nudged in the last 2 check-ins.\n` +
     `- The nudge is your ONE closing forward challenge, at the very end. Keep the reply tight and encouraging.\n` +
-    `- On days when nothing is neglected, just coach the wins/misses and end with a normal forward challenge.\n` +
+    `- On check-ins when nothing is neglected, just coach the wins/misses and end with a normal forward challenge.\n` +
+    `- Do NOT assume the user's last check-in was yesterday. Say "last time" or "since we last spoke" rather than "yesterday".\n` +
+    `- Do NOT pressure them to check in daily. This is their check-in, not a daily streak.\n` +
     `- Use Australian English.\n\n`;
 
   if (nudgeCandidate) {
-    rules += `TODAY'S NUDGE TARGET: "${nudgeCandidate}". End your reply with one short, sharp closing challenge that points the user back to this step — one stone further than yesterday. Do not mention any other neglected step.\n\n`;
+    rules += `THIS CHECK-IN'S NUDGE TARGET: "${nudgeCandidate}". End your reply with one short, sharp closing challenge that points the user back to this step — one stone further than last time. Do not mention any other neglected step.\n\n`;
   } else {
-    rules += `TODAY'S NUDGE TARGET: none. End with a normal forward challenge — do not single out any specific step as neglected.\n\n`;
+    rules += `THIS CHECK-IN'S NUDGE TARGET: none. End with a normal forward challenge — do not single out any specific step as neglected.\n\n`;
   }
 
   return (
+    nameBlock +
     goalBlock +
     memory +
     rules +
-    `TODAY'S CHECK-IN (about yesterday):\n\n` +
-    `Yesterday's goals:\n${today.goals || "(left blank)"}\n\n` +
+    `THIS CHECK-IN (about what's happened since they last checked in):\n\n` +
+    `Their goals since last check-in:\n${today.goals || "(left blank)"}\n\n` +
     `Wins:\n${today.wins || "(left blank)"}\n\n` +
     `Misses:\n${today.misses || "(left blank)"}\n\n` +
     `Now respond as John, following the pattern in your system prompt and the accountability rules above.`
   );
 }
+
 
 async function callAnthropic(opts: {
   apiKey: string;
@@ -205,9 +214,15 @@ export const submitCheckIn = createServerFn({ method: "POST" })
         }
       : null;
 
-    // Decide today's nudge candidate (server-side, deterministic).
-    // Neglected = untouched streak >= 3 (counting today as untouched if not worked).
-    // Build a synthetic "today" history entry so streak counts include today.
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("first_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const firstName = (profileRow?.first_name ?? "").trim();
+
+    // Decide this check-in's nudge candidate (server-side, deterministic).
+    // Neglected = untouched streak >= 3 (counting this check-in as untouched if not worked).
     const todayEntry: PastCheckIn = {
       check_in_date: "today",
       goals: data.goals,
@@ -232,7 +247,8 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       nudgeCandidate = scored[0]?.text ?? null;
     }
 
-    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate);
+    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate, firstName);
+
 
     let reply: string;
     try {
