@@ -188,7 +188,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       misses: r.misses,
       reply: r.reply,
       nudged_stone: r.nudged_stone ?? "",
-      stone_statuses: Array.isArray(r.stone_statuses) ? (r.stone_statuses as StoneStatus[]) : [],
+      stone_statuses: Array.isArray(r.stone_statuses) ? (r.stone_statuses as unknown as StoneStatus[]) : [],
     }));
 
     const { data: goalRow, error: goalErr } = await supabase
