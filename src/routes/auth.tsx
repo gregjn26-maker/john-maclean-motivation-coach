@@ -58,8 +58,7 @@ function AuthPage() {
           <img src={logo.url} alt="John Maclean" className="h-20 w-auto object-contain" />
         </div>
         <header className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">John Maclean</h1>
-          <p className="mt-1 text-sm text-brand-muted">Motivation Coach</p>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-navy uppercase">How far can you go?</h1>
         </header>
 
 
