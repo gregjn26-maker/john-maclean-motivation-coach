@@ -38,6 +38,14 @@ interface StoneMeta {
   target?: number | null;
   unit?: string;
   cadence?: string;
+  metric?: "count" | "rate" | "habit";
+  numerator_label?: string;
+  denominator_label?: string;
+}
+
+function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
+  if (s.metric === "count" || s.metric === "rate" || s.metric === "habit") return s.metric;
+  return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
 }
 
 interface BigGoal {
@@ -76,6 +84,8 @@ function HomePage() {
   const [goalLoaded, setGoalLoaded] = useState(false);
   const [stoneTaps, setStoneTaps] = useState<Record<string, boolean | null>>({});
   const [stoneAmounts, setStoneAmounts] = useState<Record<string, string>>({});
+  const [stoneAchieved, setStoneAchieved] = useState<Record<string, string>>({});
+  const [stoneTotals, setStoneTotals] = useState<Record<string, string>>({});
 
   const submit = useServerFn(submitCheckIn);
   const fetchGoal = useServerFn(getMyGoal);
@@ -106,9 +116,18 @@ function HomePage() {
           });
           const initialTaps: Record<string, boolean | null> = {};
           const initialAmts: Record<string, string> = {};
-          stones.forEach((s) => { initialTaps[s.text] = null; initialAmts[s.text] = ""; });
+          const initialAch: Record<string, string> = {};
+          const initialTot: Record<string, string> = {};
+          stones.forEach((s) => {
+            initialTaps[s.text] = null;
+            initialAmts[s.text] = "";
+            initialAch[s.text] = "";
+            initialTot[s.text] = "";
+          });
           setStoneTaps(initialTaps);
           setStoneAmounts(initialAmts);
+          setStoneAchieved(initialAch);
+          setStoneTotals(initialTot);
         } else {
           let seen = false;
           try { seen = localStorage.getItem("jm_welcome_seen") === "1"; } catch {}
@@ -166,21 +185,31 @@ function HomePage() {
     setReply(null);
     setSubmittedSummary(null);
     try {
-      const stone_statuses = (bigGoal?.stones ?? [])
-        .map((s) => {
-          const measurable = typeof s.target === "number" && s.target > 0;
-          if (measurable) {
+      type Status = { text: string; worked: boolean; amount?: number; achieved?: number; total?: number };
+      const stone_statuses: Status[] = (bigGoal?.stones ?? [])
+        .map((s): Status | null => {
+          const metric = stoneMetric(s);
+          if (metric === "count") {
             const raw = (stoneAmounts[s.text] ?? "").trim();
             if (raw === "") return null;
             const n = Number(raw);
             if (!Number.isFinite(n) || n < 0) return null;
             return { text: s.text, worked: n > 0, amount: n };
           }
+          if (metric === "rate") {
+            const rawA = (stoneAchieved[s.text] ?? "").trim();
+            const rawT = (stoneTotals[s.text] ?? "").trim();
+            if (rawA === "" && rawT === "") return null;
+            const a = Number(rawA);
+            const t = Number(rawT);
+            if (!Number.isFinite(a) || a < 0 || !Number.isFinite(t) || t < 0) return null;
+            return { text: s.text, worked: a > 0, achieved: a, total: t };
+          }
           const tap = stoneTaps[s.text];
           if (tap !== true && tap !== false) return null;
           return { text: s.text, worked: tap };
         })
-        .filter((x): x is { text: string; worked: boolean; amount?: number } => x !== null);
+        .filter((x): x is Status => x !== null);
       const summary = { goals, wins, misses };
       const result = await submit({ data: { ...summary, stone_statuses, overall_rating: rating } });
       setReply(result.reply);
@@ -191,9 +220,18 @@ function HomePage() {
       setRating("");
       const clearedTaps: Record<string, boolean | null> = {};
       const clearedAmts: Record<string, string> = {};
-      (bigGoal?.stones ?? []).forEach((s) => { clearedTaps[s.text] = null; clearedAmts[s.text] = ""; });
+      const clearedAch: Record<string, string> = {};
+      const clearedTot: Record<string, string> = {};
+      (bigGoal?.stones ?? []).forEach((s) => {
+        clearedTaps[s.text] = null;
+        clearedAmts[s.text] = "";
+        clearedAch[s.text] = "";
+        clearedTot[s.text] = "";
+      });
       setStoneTaps(clearedTaps);
       setStoneAmounts(clearedAmts);
+      setStoneAchieved(clearedAch);
+      setStoneTotals(clearedTot);
       loadHistory();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
@@ -264,7 +302,7 @@ function HomePage() {
                   Did you work on each stone?
                 </div>
                 {bigGoal.stones.map((s, i) => {
-                  const measurable = typeof s.target === "number" && s.target > 0;
+                  const metric = stoneMetric(s);
                   const tap = stoneTaps[s.text];
                   const cadenceLbl =
                     s.cadence === "week" ? "this week"
@@ -277,17 +315,30 @@ function HomePage() {
                     : s.cadence === "quarter" ? "/qtr"
                     : "/day";
                   const unit = (s.unit ?? "").trim();
+                  const achievedVal = stoneAchieved[s.text] ?? "";
+                  const totalVal = stoneTotals[s.text] ?? "";
+                  const a = Number(achievedVal);
+                  const t = Number(totalVal);
+                  const livePct =
+                    metric === "rate" && Number.isFinite(a) && Number.isFinite(t) && t > 0
+                      ? Math.round((a / t) * 100)
+                      : null;
                   return (
                     <div key={i} className="rounded-lg bg-brand-bg p-2.5">
                       <div className="flex items-baseline justify-between gap-2 mb-2">
                         <p className="text-sm text-brand-text break-words font-medium">{s.text}</p>
-                        {measurable && (
+                        {metric === "count" && (
                           <span className="text-[11px] text-brand-muted flex-shrink-0">
                             target {s.target}{unit ? ` ${unit}` : ""} {cadenceShort}
                           </span>
                         )}
+                        {metric === "rate" && (
+                          <span className="text-[11px] text-brand-muted flex-shrink-0">
+                            target {s.target}% {cadenceShort}
+                          </span>
+                        )}
                       </div>
-                      {measurable ? (
+                      {metric === "count" && (
                         <div className="flex items-center gap-2">
                           <Label className="text-xs text-brand-muted whitespace-nowrap">
                             {unit ? `${unit.charAt(0).toUpperCase() + unit.slice(1)} ${cadenceLbl}:` : `${cadenceLbl}:`}
@@ -304,7 +355,45 @@ function HomePage() {
                             className="h-9 w-24 text-base bg-white"
                           />
                         </div>
-                      ) : (
+                      )}
+                      {metric === "rate" && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              value={achievedVal}
+                              onChange={(e) =>
+                                setStoneAchieved((prev) => ({ ...prev, [s.text]: e.target.value }))
+                              }
+                              placeholder="6"
+                              className="h-9 w-20 text-base bg-white"
+                            />
+                            <span className="text-xs text-brand-muted">of</span>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              value={totalVal}
+                              onChange={(e) =>
+                                setStoneTotals((prev) => ({ ...prev, [s.text]: e.target.value }))
+                              }
+                              placeholder="20"
+                              className="h-9 w-20 text-base bg-white"
+                            />
+                            {livePct !== null && (
+                              <span className="text-xs text-brand-text font-medium">= {livePct}%</span>
+                            )}
+                          </div>
+                          {(s.numerator_label || s.denominator_label) && (
+                            <p className="text-[10px] text-brand-muted leading-snug">
+                              {(s.numerator_label || "achieved").trim()} of {(s.denominator_label || "total").trim()} {cadenceLbl}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {metric === "habit" && (
                         <div className="flex gap-2">
                           <button
                             type="button"

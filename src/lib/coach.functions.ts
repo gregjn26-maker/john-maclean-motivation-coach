@@ -6,6 +6,8 @@ const StoneStatusSchema = z.object({
   text: z.string().trim().min(1).max(200),
   worked: z.boolean(),
   amount: z.number().min(0).max(1000000).nullable().optional(),
+  achieved: z.number().min(0).max(1000000).nullable().optional(),
+  total: z.number().min(0).max(1000000).nullable().optional(),
 });
 
 const CheckInInput = z.object({
@@ -19,9 +21,22 @@ const CheckInInput = z.object({
 const PRIMARY_MODEL = "claude-opus-4-7";
 const FALLBACK_MODEL = "claude-sonnet-4-6";
 
-interface StoneStatus { text: string; worked: boolean; amount?: number | null }
+interface StoneStatus { text: string; worked: boolean; amount?: number | null; achieved?: number | null; total?: number | null }
 
-interface StoneMeta { text: string; target?: number | null; unit?: string; cadence?: string }
+interface StoneMeta {
+  text: string;
+  target?: number | null;
+  unit?: string;
+  cadence?: string;
+  metric?: "count" | "rate" | "habit";
+  numerator_label?: string;
+  denominator_label?: string;
+}
+
+function getMetric(s: StoneMeta): "count" | "rate" | "habit" {
+  if (s.metric === "count" || s.metric === "rate" || s.metric === "habit") return s.metric;
+  return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
+}
 
 interface PastCheckIn {
   check_in_date: string;
@@ -42,6 +57,43 @@ interface BigGoalContext {
 function normaliseText(s: string) {
   return (s || "").trim().toLowerCase();
 }
+
+function currentPeriodRange(cadence: string | undefined):
+  { start: Date; end: Date; label: string } | null {
+  const now = new Date();
+  if (cadence === "month") {
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+      label: "this month",
+    };
+  }
+  if (cadence === "quarter") {
+    const q = Math.floor(now.getMonth() / 3);
+    return {
+      start: new Date(now.getFullYear(), q * 3, 1),
+      end: new Date(now.getFullYear(), q * 3 + 3, 1),
+      label: "this quarter",
+    };
+  }
+  if (cadence === "week") {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    // Week starts Monday
+    const day = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - day);
+    const end = new Date(d);
+    end.setDate(end.getDate() + 7);
+    return { start: d, end, label: "this week" };
+  }
+  if (cadence === "day") {
+    const d = new Date(now); d.setHours(0, 0, 0, 0);
+    const end = new Date(d); end.setDate(end.getDate() + 1);
+    return { start: d, end, label: "today" };
+  }
+  return null;
+}
+
 
 /**
  * For a given stone, compute how many consecutive most-recent check-ins it
@@ -86,16 +138,32 @@ function buildUserMessage(
       bigGoal.stones.forEach((s, i) => {
         const streak = untouchedStreak(s.text, past);
         const todayMatch = today.stone_statuses.find((t) => normaliseText(t.text) === normaliseText(s.text));
-        const hasTarget = typeof s.target === "number" && s.target > 0;
+        const metric = getMetric(s);
         const unit = (s.unit ?? "").trim();
         const cadence = s.cadence === "week" ? "per week" : s.cadence === "month" ? "per month" : s.cadence === "quarter" ? "per quarter" : s.cadence === "day" ? "per day" : "";
-        const targetStr = hasTarget ? ` — target ${s.target}${unit ? " " + unit : ""}${cadence ? " " + cadence : ""}` : "";
+
+        let targetStr = "";
+        if (metric === "count" && typeof s.target === "number" && s.target > 0) {
+          targetStr = ` — type COUNT, target ${s.target}${unit ? " " + unit : ""}${cadence ? " " + cadence : ""}`;
+        } else if (metric === "rate" && typeof s.target === "number" && s.target > 0) {
+          const num = (s.numerator_label ?? "").trim();
+          const den = (s.denominator_label ?? "").trim();
+          const ratio = num && den ? ` (${num} / ${den})` : "";
+          targetStr = ` — type RATE, target ${s.target}%${ratio}${cadence ? " " + cadence : ""}`;
+        } else {
+          targetStr = " — type YES/NO HABIT";
+        }
 
         let status: string;
         if (todayMatch) {
-          if (hasTarget) {
+          if (metric === "count") {
             const amt = typeof todayMatch.amount === "number" ? todayMatch.amount : (todayMatch.worked ? "(yes, no number)" : 0);
-            status = `this check-in: ${amt}${unit ? " " + unit : ""} (target ${s.target})`;
+            status = `this check-in: ${amt}${unit ? " " + unit : ""}`;
+          } else if (metric === "rate") {
+            const ach = typeof todayMatch.achieved === "number" ? todayMatch.achieved : 0;
+            const tot = typeof todayMatch.total === "number" ? todayMatch.total : 0;
+            const pct = tot > 0 ? Math.round((ach / tot) * 100) : 0;
+            status = `this check-in: ${ach} of ${tot} (${pct}%)`;
           } else {
             status = todayMatch.worked ? "WORKED ON since last check-in" : "did NOT work on since last check-in";
           }
@@ -103,9 +171,31 @@ function buildUserMessage(
           status = "no answer this check-in";
         }
 
-        // Recent actuals (most recent 5 check-ins) for measurable stones
+        // Period-aggregated progress for rate stones — combine across current period.
+        let periodInfo = "";
+        if (metric === "rate" && typeof s.target === "number" && s.target > 0) {
+          const period = currentPeriodRange(s.cadence);
+          let ach = 0;
+          let tot = 0;
+          const entries: Array<{ date: Date; statuses: StoneStatus[] }> = [
+            { date: new Date(), statuses: today.stone_statuses },
+            ...past.map((p) => ({ date: new Date(p.check_in_date), statuses: p.stone_statuses })),
+          ];
+          for (const p of entries) {
+            if (period && (p.date < period.start || p.date >= period.end)) continue;
+            const m = p.statuses.find((x) => normaliseText(x.text) === normaliseText(s.text));
+            if (!m) continue;
+            if (typeof m.achieved === "number") ach += m.achieved;
+            if (typeof m.total === "number") tot += m.total;
+          }
+          const pct = tot > 0 ? Math.round((ach / tot) * 100) : 0;
+          const periodLbl = period?.label ?? "all-time";
+          periodInfo = `; ${periodLbl}: ${ach} of ${tot} = ${pct}% (target ${s.target}%)`;
+        }
+
+        // Recent actuals for count stones (most recent 5 check-ins)
         let recent = "";
-        if (hasTarget) {
+        if (metric === "count" && typeof s.target === "number" && s.target > 0) {
           const recentVals = past.slice(0, 5).map((p) => {
             const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
             const m = arr.find((x) => normaliseText(x.text) === normaliseText(s.text));
@@ -117,7 +207,7 @@ function buildUserMessage(
         }
 
         const nudged = recentlyNudged(s.text, past) ? "  [you already nudged this step in the last 2 check-ins]" : "";
-        goalBlock += `  ${i + 1}. ${s.text}${targetStr} — ${status}${recent}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
+        goalBlock += `  ${i + 1}. ${s.text}${targetStr} — ${status}${periodInfo}${recent}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
       });
     }
     goalBlock += "\n---\n\n";

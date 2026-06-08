@@ -30,17 +30,28 @@ function JMAvatar() {
 }
 
 type Cadence = "day" | "week" | "month" | "quarter";
+type Metric = "count" | "rate" | "habit";
 
 type StoneForm = {
   text: string;
-  measurable: boolean;
+  metric: Metric;
   target: string;
   unit: string;
   cadence: Cadence;
+  numerator_label: string;
+  denominator_label: string;
 };
 
 function emptyStone(): StoneForm {
-  return { text: "", measurable: false, target: "", unit: "", cadence: "day" };
+  return {
+    text: "",
+    metric: "habit",
+    target: "",
+    unit: "",
+    cadence: "day",
+    numerator_label: "",
+    denominator_label: "",
+  };
 }
 
 function GoalsPage() {
@@ -65,7 +76,15 @@ function GoalsPage() {
           setBigGoal(res.goal.big_goal ?? "");
           setTargetDate(res.goal.target_date ?? "");
           const s = Array.isArray(res.goal.stones)
-            ? (res.goal.stones as Array<{ text: string; target?: number | null; unit?: string; cadence?: string }>)
+            ? (res.goal.stones as Array<{
+                text: string;
+                target?: number | null;
+                unit?: string;
+                cadence?: string;
+                metric?: string;
+                numerator_label?: string;
+                denominator_label?: string;
+              }>)
             : [];
           setStones(
             s.length
@@ -76,13 +95,19 @@ function GoalsPage() {
                     : x.cadence === "month" ? "month"
                     : x.cadence === "quarter" ? "quarter"
                     : "day";
+                  const metric: Metric =
+                    x.metric === "count" || x.metric === "rate" || x.metric === "habit"
+                      ? x.metric
+                      : (hasTarget ? "count" : "habit");
                   return {
                     text: x.text ?? "",
-                    measurable: hasTarget,
+                    metric,
                     target: hasTarget ? String(x.target) : "",
                     unit: x.unit ?? "",
                     cadence,
-                  };
+                    numerator_label: x.numerator_label ?? "",
+                    denominator_label: x.denominator_label ?? "",
+                  } satisfies StoneForm;
                 })
               : [emptyStone()],
           );
@@ -109,20 +134,56 @@ function GoalsPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const cleanedStones = stones
-      .map((s) => {
+    type CleanedStone = {
+      text: string;
+      target: number | null;
+      unit: string;
+      cadence: Cadence | "";
+      metric: Metric;
+      numerator_label: string;
+      denominator_label: string;
+    };
+    const cleanedStones: CleanedStone[] = stones
+      .map((s): CleanedStone | null => {
         const text = s.text.trim();
         if (!text) return null;
-        const targetNum = s.measurable ? Number(s.target) : NaN;
-        const hasTarget = s.measurable && Number.isFinite(targetNum) && targetNum > 0;
+        if (s.metric === "count") {
+          const n = Number(s.target);
+          const hasTarget = Number.isFinite(n) && n > 0;
+          return {
+            text,
+            metric: "count",
+            target: hasTarget ? n : null,
+            unit: s.unit.trim().slice(0, 40),
+            cadence: hasTarget ? s.cadence : "",
+            numerator_label: "",
+            denominator_label: "",
+          };
+        }
+        if (s.metric === "rate") {
+          const n = Number(s.target);
+          const hasTarget = Number.isFinite(n) && n > 0 && n <= 100;
+          return {
+            text,
+            metric: "rate",
+            target: hasTarget ? n : null,
+            unit: "",
+            cadence: s.cadence,
+            numerator_label: s.numerator_label.trim().slice(0, 80),
+            denominator_label: s.denominator_label.trim().slice(0, 80),
+          };
+        }
         return {
           text,
-          target: hasTarget ? targetNum : null,
-          unit: hasTarget ? s.unit.trim().slice(0, 40) : "",
-          cadence: hasTarget ? s.cadence : "",
-        } as { text: string; target: number | null; unit: string; cadence: Cadence | "" };
+          metric: "habit",
+          target: null,
+          unit: "",
+          cadence: "",
+          numerator_label: "",
+          denominator_label: "",
+        };
       })
-      .filter((x): x is { text: string; target: number | null; unit: string; cadence: Cadence | "" } => x !== null);
+      .filter((x): x is CleanedStone => x !== null);
     if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
     try {
@@ -289,32 +350,43 @@ function GoalsPage() {
                       )}
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
-                        onClick={() => updateStone(i, { measurable: false })}
-                        className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                          !s.measurable
+                        onClick={() => updateStone(i, { metric: "habit" })}
+                        className={`h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.metric === "habit"
                             ? "bg-brand-navy text-white border-brand-navy"
                             : "bg-white text-brand-muted border-border hover:text-brand-text"
                         }`}
                       >
-                        Just a yes/no habit
+                        Yes/no habit
                       </button>
                       <button
                         type="button"
-                        onClick={() => updateStone(i, { measurable: true })}
-                        className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                          s.measurable
+                        onClick={() => updateStone(i, { metric: "count" })}
+                        className={`h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.metric === "count"
                             ? "bg-brand-orange text-white border-brand-orange"
                             : "bg-white text-brand-muted border-border hover:text-brand-text"
                         }`}
                       >
-                        Add a number to track
+                        Count / amount
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStone(i, { metric: "rate" })}
+                        className={`h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.metric === "rate"
+                            ? "bg-brand-orange text-white border-brand-orange"
+                            : "bg-white text-brand-muted border-border hover:text-brand-text"
+                        }`}
+                      >
+                        Percentage / rate
                       </button>
                     </div>
 
-                    {s.measurable && (
+                    {s.metric === "count" && (
                       <div className="grid grid-cols-[80px_1fr_110px] gap-2">
                         <Input
                           type="number"
@@ -342,6 +414,61 @@ function GoalsPage() {
                           <option value="month">per month</option>
                           <option value="quarter">per quarter</option>
                         </select>
+                      </div>
+                    )}
+
+                    {s.metric === "rate" && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={100}
+                              value={s.target}
+                              onChange={(e) => updateStone(i, { target: e.target.value })}
+                              placeholder="30"
+                              className="text-base h-11 bg-white pr-7"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-brand-muted pointer-events-none">%</span>
+                          </div>
+                          <select
+                            value={s.cadence}
+                            onChange={(e) => updateStone(i, { cadence: e.target.value as Cadence })}
+                            className="h-11 rounded-md border border-input bg-white px-2 text-sm"
+                          >
+                            <option value="day">per day</option>
+                            <option value="week">per week</option>
+                            <option value="month">per month</option>
+                            <option value="quarter">per quarter</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-brand-muted">Numerator (the "achieved" thing)</Label>
+                            <Input
+                              value={s.numerator_label}
+                              onChange={(e) => updateStone(i, { numerator_label: e.target.value })}
+                              placeholder="e.g. units sold with the add-on"
+                              className="text-sm h-10 bg-white"
+                              maxLength={80}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-brand-muted">Denominator (the "total" thing)</Label>
+                            <Input
+                              value={s.denominator_label}
+                              onChange={(e) => updateStone(i, { denominator_label: e.target.value })}
+                              placeholder="e.g. total units sold"
+                              className="text-sm h-10 bg-white"
+                              maxLength={80}
+                            />
+                          </div>
+                          <p className="text-[11px] text-brand-muted leading-snug">
+                            At each check-in you'll enter both numbers; we'll work out the rate.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
