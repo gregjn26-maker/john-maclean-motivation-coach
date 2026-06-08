@@ -232,7 +232,7 @@ function ProgressPage() {
             <div className="mt-4 space-y-4">
               {goal.stones.map((stone, i) => {
                 const metric = stoneMetric(stone);
-                const measurable = metric === "count" || metric === "rate";
+                const measurable = metric === "count";
                 const unit = (stone.unit ?? "").trim();
                 const cadence = stone.cadence ?? "";
                 const isPeriod = cadence === "month" || cadence === "quarter";
