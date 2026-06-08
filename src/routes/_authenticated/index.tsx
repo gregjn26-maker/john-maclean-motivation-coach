@@ -98,15 +98,17 @@ function HomePage() {
       .then((res) => {
         const g = res.goal;
         if (g) {
-          const stones = Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [];
+          const stones = Array.isArray(g.stones) ? (g.stones as unknown as StoneMeta[]) : [];
           setBigGoal({
             big_goal: g.big_goal ?? "",
             target_date: g.target_date ?? null,
             stones,
           });
-          const initial: Record<string, boolean | null> = {};
-          stones.forEach((s) => { initial[s.text] = null; });
-          setStoneTaps(initial);
+          const initialTaps: Record<string, boolean | null> = {};
+          const initialAmts: Record<string, string> = {};
+          stones.forEach((s) => { initialTaps[s.text] = null; initialAmts[s.text] = ""; });
+          setStoneTaps(initialTaps);
+          setStoneAmounts(initialAmts);
         } else {
           let seen = false;
           try { seen = localStorage.getItem("jm_welcome_seen") === "1"; } catch {}
