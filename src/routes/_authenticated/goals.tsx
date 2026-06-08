@@ -227,26 +227,82 @@ function GoalsPage() {
                   1–5 smaller, measurable steps. e.g. "20 calls a day", "5 meetings a week"
                 </p>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {stones.map((s, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <div className="flex-1">
-                      <Input
-                        value={s}
-                        onChange={(e) => updateStone(i, e.target.value)}
-                        placeholder={`Stone ${i + 1}`}
-                        className="text-base h-11"
-                      />
+                  <div key={i} className="rounded-lg border border-border bg-brand-bg p-3 space-y-3">
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <Input
+                          value={s.text}
+                          onChange={(e) => updateStone(i, { text: e.target.value })}
+                          placeholder={`Stone ${i + 1} (e.g. Calls, Meetings)`}
+                          className="text-base h-11 bg-white"
+                        />
+                      </div>
+                      {stones.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeStone(i)}
+                          className="h-11 w-11 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                          aria-label="Remove stone"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
-                    {stones.length > 1 && (
+
+                    <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => removeStone(i)}
-                        className="h-11 w-11 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
-                        aria-label="Remove stone"
+                        onClick={() => updateStone(i, { measurable: false })}
+                        className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                          !s.measurable
+                            ? "bg-brand-navy text-white border-brand-navy"
+                            : "bg-white text-brand-muted border-border hover:text-brand-text"
+                        }`}
                       >
-                        <X className="h-4 w-4" />
+                        Just a yes/no habit
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStone(i, { measurable: true })}
+                        className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.measurable
+                            ? "bg-brand-orange text-white border-brand-orange"
+                            : "bg-white text-brand-muted border-border hover:text-brand-text"
+                        }`}
+                      >
+                        Add a number to track
+                      </button>
+                    </div>
+
+                    {s.measurable && (
+                      <div className="grid grid-cols-[80px_1fr_110px] gap-2">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          value={s.target}
+                          onChange={(e) => updateStone(i, { target: e.target.value })}
+                          placeholder="20"
+                          className="text-base h-11 bg-white"
+                        />
+                        <Input
+                          value={s.unit}
+                          onChange={(e) => updateStone(i, { unit: e.target.value })}
+                          placeholder="calls / kg / mins"
+                          className="text-base h-11 bg-white"
+                          maxLength={40}
+                        />
+                        <select
+                          value={s.cadence}
+                          onChange={(e) => updateStone(i, { cadence: e.target.value as "day" | "week" })}
+                          className="h-11 rounded-md border border-input bg-white px-2 text-sm"
+                        >
+                          <option value="day">per day</option>
+                          <option value="week">per week</option>
+                        </select>
+                      </div>
                     )}
                   </div>
                 ))}
