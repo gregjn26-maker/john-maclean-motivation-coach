@@ -134,20 +134,56 @@ function GoalsPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const cleanedStones = stones
-      .map((s) => {
+    type CleanedStone = {
+      text: string;
+      target: number | null;
+      unit: string;
+      cadence: Cadence | "";
+      metric: Metric;
+      numerator_label: string;
+      denominator_label: string;
+    };
+    const cleanedStones: CleanedStone[] = stones
+      .map((s): CleanedStone | null => {
         const text = s.text.trim();
         if (!text) return null;
-        const targetNum = s.measurable ? Number(s.target) : NaN;
-        const hasTarget = s.measurable && Number.isFinite(targetNum) && targetNum > 0;
+        if (s.metric === "count") {
+          const n = Number(s.target);
+          const hasTarget = Number.isFinite(n) && n > 0;
+          return {
+            text,
+            metric: "count",
+            target: hasTarget ? n : null,
+            unit: s.unit.trim().slice(0, 40),
+            cadence: hasTarget ? s.cadence : "",
+            numerator_label: "",
+            denominator_label: "",
+          };
+        }
+        if (s.metric === "rate") {
+          const n = Number(s.target);
+          const hasTarget = Number.isFinite(n) && n > 0 && n <= 100;
+          return {
+            text,
+            metric: "rate",
+            target: hasTarget ? n : null,
+            unit: "",
+            cadence: s.cadence,
+            numerator_label: s.numerator_label.trim().slice(0, 80),
+            denominator_label: s.denominator_label.trim().slice(0, 80),
+          };
+        }
         return {
           text,
-          target: hasTarget ? targetNum : null,
-          unit: hasTarget ? s.unit.trim().slice(0, 40) : "",
-          cadence: hasTarget ? s.cadence : "",
-        } as { text: string; target: number | null; unit: string; cadence: Cadence | "" };
+          metric: "habit",
+          target: null,
+          unit: "",
+          cadence: "",
+          numerator_label: "",
+          denominator_label: "",
+        };
       })
-      .filter((x): x is { text: string; target: number | null; unit: string; cadence: Cadence | "" } => x !== null);
+      .filter((x): x is CleanedStone => x !== null);
     if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
     try {
