@@ -1,12 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { submitCheckIn } from "@/lib/coach.functions";
+import { getMyGoal } from "@/lib/goals.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Target, Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -28,6 +30,12 @@ interface PastCheckIn {
   created_at: string;
 }
 
+interface BigGoal {
+  big_goal: string;
+  target_date: string | null;
+  stones: Array<{ text: string }>;
+}
+
 function HomePage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
@@ -38,12 +46,31 @@ function HomePage() {
   const [reply, setReply] = useState<string | null>(null);
   const [history, setHistory] = useState<PastCheckIn[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [bigGoal, setBigGoal] = useState<BigGoal | null>(null);
+  const [goalLoaded, setGoalLoaded] = useState(false);
 
   const submit = useServerFn(submitCheckIn);
+  const fetchGoal = useServerFn(getMyGoal);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
     loadHistory();
+    fetchGoal({})
+      .then((res) => {
+        const g = res.goal;
+        if (g) {
+          setBigGoal({
+            big_goal: g.big_goal ?? "",
+            target_date: g.target_date ?? null,
+            stones: Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [],
+          });
+        } else {
+          // First-time user — send them to set their goal
+          navigate({ to: "/goals" });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setGoalLoaded(true));
   }, []);
 
   async function loadHistory() {
@@ -97,17 +124,62 @@ function HomePage() {
             <h1 className="text-base font-semibold text-foreground leading-tight">John Maclean</h1>
             <p className="text-xs text-muted-foreground leading-tight">Daily Coach</p>
           </div>
-          <button
-            onClick={signOut}
-            className="text-xs text-muted-foreground hover:text-foreground"
-            aria-label="Sign out"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-4">
+            <Link to="/goals" className="text-xs text-muted-foreground hover:text-foreground">
+              My goals
+            </Link>
+            <button
+              onClick={signOut}
+              className="text-xs text-muted-foreground hover:text-foreground"
+              aria-label="Sign out"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-xl px-5 pt-5 space-y-6">
+        {goalLoaded && bigGoal && (
+          <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2 min-w-0">
+                <Target className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-wide text-primary font-semibold">Your big goal</div>
+                  <p className="text-sm text-foreground font-medium mt-0.5 leading-snug break-words">
+                    {bigGoal.big_goal || "(not set)"}
+                  </p>
+                  {bigGoal.target_date && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      by {new Date(bigGoal.target_date).toLocaleDateString("en-AU", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Link
+                to="/goals"
+                className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                aria-label="Edit goal"
+              >
+                <Pencil className="h-4 w-4" />
+              </Link>
+            </div>
+            {bigGoal.stones.length > 0 && (
+              <ul className="mt-3 space-y-1.5 pl-6">
+                {bigGoal.stones.map((s, i) => (
+                  <li key={i} className="text-xs text-foreground/80 flex gap-2">
+                    <span className="text-primary">▸</span>
+                    <span className="break-words">{s.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-lg font-semibold text-foreground">Good morning{email ? `, ${email.split("@")[0]}` : ""}.</h2>
           <p className="mt-1 text-sm text-muted-foreground">
