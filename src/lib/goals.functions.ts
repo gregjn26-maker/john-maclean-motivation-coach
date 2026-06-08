@@ -7,6 +7,9 @@ const StoneSchema = z.object({
   target: z.number().min(0).max(100000).nullable().optional(),
   unit: z.string().trim().max(40).optional().default(""),
   cadence: z.enum(["day", "week", "month", "quarter", ""]).optional().default(""),
+  metric: z.enum(["count", "rate", "habit"]).optional(),
+  numerator_label: z.string().trim().max(80).optional().default(""),
+  denominator_label: z.string().trim().max(80).optional().default(""),
 });
 
 const GoalInput = z.object({
