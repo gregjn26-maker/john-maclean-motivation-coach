@@ -208,37 +208,6 @@ function HomePage() {
     navigate({ to: "/auth", replace: true });
   }
 
-  if (nameLoaded && needsName) {
-    return (
-      <main className="min-h-screen bg-brand-bg flex items-center px-5 py-10">
-        <div className="mx-auto max-w-md w-full rounded-2xl bg-white border border-border p-6">
-          <h1 className="text-xl font-semibold text-brand-navy">G'day.</h1>
-          <p className="mt-2 text-sm text-brand-muted">What should John call you?</p>
-          <form onSubmit={onSaveName} className="mt-5 space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-sm text-brand-text">First name</Label>
-              <Input
-                autoFocus
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder="e.g. Greg"
-                className="text-base h-11"
-                maxLength={60}
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={savingName}
-              className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white"
-            >
-              {savingName ? "Saving…" : "Save"}
-            </Button>
-          </form>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
       <AppHeader
