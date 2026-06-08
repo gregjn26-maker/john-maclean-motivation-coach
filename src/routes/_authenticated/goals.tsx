@@ -350,32 +350,43 @@ function GoalsPage() {
                       )}
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
-                        onClick={() => updateStone(i, { measurable: false })}
-                        className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                          !s.measurable
+                        onClick={() => updateStone(i, { metric: "habit" })}
+                        className={`h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.metric === "habit"
                             ? "bg-brand-navy text-white border-brand-navy"
                             : "bg-white text-brand-muted border-border hover:text-brand-text"
                         }`}
                       >
-                        Just a yes/no habit
+                        Yes/no habit
                       </button>
                       <button
                         type="button"
-                        onClick={() => updateStone(i, { measurable: true })}
-                        className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                          s.measurable
+                        onClick={() => updateStone(i, { metric: "count" })}
+                        className={`h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.metric === "count"
                             ? "bg-brand-orange text-white border-brand-orange"
                             : "bg-white text-brand-muted border-border hover:text-brand-text"
                         }`}
                       >
-                        Add a number to track
+                        Count / amount
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStone(i, { metric: "rate" })}
+                        className={`h-9 rounded-md text-xs font-medium border transition-colors ${
+                          s.metric === "rate"
+                            ? "bg-brand-orange text-white border-brand-orange"
+                            : "bg-white text-brand-muted border-border hover:text-brand-text"
+                        }`}
+                      >
+                        Percentage / rate
                       </button>
                     </div>
 
-                    {s.measurable && (
+                    {s.metric === "count" && (
                       <div className="grid grid-cols-[80px_1fr_110px] gap-2">
                         <Input
                           type="number"
@@ -403,6 +414,61 @@ function GoalsPage() {
                           <option value="month">per month</option>
                           <option value="quarter">per quarter</option>
                         </select>
+                      </div>
+                    )}
+
+                    {s.metric === "rate" && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={100}
+                              value={s.target}
+                              onChange={(e) => updateStone(i, { target: e.target.value })}
+                              placeholder="30"
+                              className="text-base h-11 bg-white pr-7"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-brand-muted pointer-events-none">%</span>
+                          </div>
+                          <select
+                            value={s.cadence}
+                            onChange={(e) => updateStone(i, { cadence: e.target.value as Cadence })}
+                            className="h-11 rounded-md border border-input bg-white px-2 text-sm"
+                          >
+                            <option value="day">per day</option>
+                            <option value="week">per week</option>
+                            <option value="month">per month</option>
+                            <option value="quarter">per quarter</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-brand-muted">Numerator (the "achieved" thing)</Label>
+                            <Input
+                              value={s.numerator_label}
+                              onChange={(e) => updateStone(i, { numerator_label: e.target.value })}
+                              placeholder="e.g. units sold with the add-on"
+                              className="text-sm h-10 bg-white"
+                              maxLength={80}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-brand-muted">Denominator (the "total" thing)</Label>
+                            <Input
+                              value={s.denominator_label}
+                              onChange={(e) => updateStone(i, { denominator_label: e.target.value })}
+                              placeholder="e.g. total units sold"
+                              className="text-sm h-10 bg-white"
+                              maxLength={80}
+                            />
+                          </div>
+                          <p className="text-[11px] text-brand-muted leading-snug">
+                            At each check-in you'll enter both numbers; we'll work out the rate.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
