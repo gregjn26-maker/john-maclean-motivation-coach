@@ -16,13 +16,6 @@ export const Route = createFileRoute("/_authenticated/welcome")({
   component: WelcomePage,
 });
 
-function JMAvatar() {
-  return (
-    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-brand-navy inline-flex items-center justify-center text-white font-bold text-sm">
-      JM
-    </div>
-  );
-}
 
 function WelcomePage() {
   const navigate = useNavigate();
@@ -54,48 +47,26 @@ function WelcomePage() {
       </section>
 
       {/* Intro */}
-      <section className="mx-auto max-w-xl px-6 pt-6 space-y-5">
-        <div className="space-y-4 text-base text-foreground leading-relaxed">
-          <p>
-            <span className="font-semibold text-brand-navy">John Maclean OAM</span> was
-            22 when an 8-tonne truck hit him from behind while he was out
-            training on his bike. He woke up a paraplegic and was told what he
-            couldn't do for the rest of his life.
-          </p>
-          <p>
-            He went on to become the first wheelchair athlete to complete the
-            Hawaii Ironman and the first to swim the English Channel, then
-            took rowing silver at the 2008 Beijing Paralympics. Twenty-five
-            years after the accident, he relearned to walk.
-          </p>
-          <p className="rounded-lg border-l-4 px-4 py-3 italic text-brand-navy bg-brand-cream" style={{ borderColor: "#F4B400" }}>
-            "Son, look how far you've come… now how far can you go?"
-            <span className="block not-italic text-xs text-brand-muted mt-1">— John's father</span>
-          </p>
-          <p>
-            That question became his mission, and now it's yours. Set a goal
-            that matters, check in with your wins and the things that got in
-            the way, and John will help you take the next step — one stone
-            further than yesterday.
-          </p>
-        </div>
-
+      <section className="mx-auto max-w-3xl px-6 pt-6 space-y-5">
         <JohnVideos heading="Meet John" />
 
-        {/* Mr Brown / stone intro */}
-        <section className="rounded-xl bg-coach-panel p-5">
-          <div className="flex items-start gap-3">
-            <JMAvatar />
-            <div className="space-y-2 text-sm text-coach-panel-foreground leading-relaxed">
-              <p>
-                Here's something I learned the hard way. When I was learning to walk again, my neighbour Mr Brown would come out each afternoon and ask, "What's our goal today?" The goal was a power pole up the street — and I couldn't reach it. So we'd put a stone down where I got to that day, and the next day move it a little further. Slowly that stone walked its way up to the pole. That's how every big goal actually gets done — not in one leap, but one stone further than yesterday.
-              </p>
-              <p>
-                So set your big goal — that's your pole. Then break it into as many small, achievable stones as you can: the daily and weekly wins you can actually tick off. Hit enough of them, and one day you'll look up and the pole will be right there.
-              </p>
-            </div>
-          </div>
-        </section>
+        <div className="space-y-4 text-base text-foreground leading-relaxed">
+          <p>
+            In 1988, at 22, I was hit by an eight-tonne truck while I was out training on my bike. I woke in a spinal unit, paralysed, and was told all the things I'd never do again. For a long time, I believed them.
+          </p>
+          <p>
+            About a year later, at home — broken and burnt out — my dad sat with me. We both cried. Then he said the words that changed my life: <span className="italic">"Son, look how far you've come… now how far can you go?"</span>
+          </p>
+          <p>
+            That question became my mission. I went on to be the first wheelchair athlete to finish the Hawaii Ironman, the first to swim the English Channel, I won a rowing silver in Beijing — and 25 years after the accident, I relearned to walk and finished the very race I'd been training for the day I was hit.
+          </p>
+          <p>
+            None of it happened in one leap. It happened one goal at a time — one stone further than yesterday. Everything I've done started as something I dared to picture, then broke into steps I could actually take. You're only ever limited by what you dare to dream.
+          </p>
+          <p>
+            So that's what this is. You set the goal. You take the next step. And we find out together — how far can you go?
+          </p>
+        </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed italic">
           John's an AI coach here, built on John Maclean's real stories, voice

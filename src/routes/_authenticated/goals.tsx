@@ -96,7 +96,6 @@ function GoalsPage() {
     setStones((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
   function addStone() {
-    if (stones.length >= 5) return;
     setStones((prev) => [...prev, emptyStone()]);
   }
   function removeStone(i: number) {
@@ -244,7 +243,7 @@ function GoalsPage() {
               <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
                 <h2 className="text-base font-semibold text-brand-navy">Your stones</h2>
                 <p className="text-xs text-brand-muted mt-0.5">
-                  1–5 small, measurable steps that get you there. e.g. "20 calls a day", "5 meetings a week".
+                  Small, measurable steps that get you there — add as many as you need. e.g. "20 calls a day", "5 meetings a week".
                 </p>
               </div>
               <div className="space-y-4">
@@ -327,11 +326,9 @@ function GoalsPage() {
                   </div>
                 ))}
               </div>
-              {stones.length < 5 && (
-                <Button type="button" variant="outline" onClick={addStone} className="w-full">
-                  <Plus className="h-4 w-4 mr-1" /> Add stone
-                </Button>
-              )}
+              <Button type="button" variant="outline" onClick={addStone} className="w-full">
+                <Plus className="h-4 w-4 mr-1" /> Add stone
+              </Button>
             </section>
 
             <Button
