@@ -16,7 +16,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .select("id, email, first_name, last_name")
       .eq("id", userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[profile] load error:", error); throw new Error("Could not load your profile."); }
     return { profile: data };
   });
 
