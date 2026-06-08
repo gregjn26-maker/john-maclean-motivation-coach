@@ -159,7 +159,7 @@ function ProgressPage() {
 
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
-      <AppHeader />
+      <AppHeader back={{ to: "/" }} />
       <div className="mx-auto max-w-xl lg:max-w-6xl px-5 pt-5 space-y-5">
         <h1 className="text-xl lg:text-2xl font-semibold text-brand-navy">My Progress</h1>
 
