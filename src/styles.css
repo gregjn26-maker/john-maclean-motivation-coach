@@ -109,6 +109,24 @@
   --sidebar-ring: oklch(0.704 0.04 256.788);
   --coach-panel: oklch(0.97 0.02 85);
   --coach-panel-foreground: oklch(0.3 0.05 260);
+  /* John Maclean brand palette */
+  --brand-navy: #0A2540;
+  --brand-orange: #FF6B35;
+  --brand-gold: #F4B400;
+  --brand-bg: #F4F6F8;
+  --brand-text: #3D4759;
+  --brand-muted: #8A94A6;
+  --brand-green: #1FAA59;
+  --brand-red: #E74C3C;
+  --brand-cream: #FFF4E8;
+  --brand-blue: #E8F0FE;
+  /* Override base tokens to match brand */
+  --background: #F4F6F8;
+  --foreground: #3D4759;
+  --primary: #0A2540;
+  --primary-foreground: #FFFFFF;
+  --muted-foreground: #8A94A6;
+  --border: #E2E8F0;
 }
 
 .dark {
