@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import logoAsset from "@/assets/jm-logo.webp.asset.json";
 import { AppHeader } from "@/components/app-header";
+import { JohnVideos } from "@/components/john-videos";
 
 export const Route = createFileRoute("/_authenticated/welcome")({
   head: () => ({
@@ -54,18 +55,32 @@ function WelcomePage() {
 
       {/* Intro */}
       <section className="mx-auto max-w-xl px-6 pt-6 space-y-5">
-        <p className="text-base text-foreground leading-relaxed">
-          <span className="font-semibold">John Maclean OAM</span> — Paralympic
-          medallist, and the first wheelchair athlete to complete the Hawaii
-          Ironman and swim the English Channel.
-        </p>
+        <div className="space-y-4 text-base text-foreground leading-relaxed">
+          <p>
+            <span className="font-semibold text-brand-navy">John Maclean OAM</span> was
+            22 when an 8-tonne truck hit him from behind while he was out
+            training on his bike. He woke up a paraplegic and was told what he
+            couldn't do for the rest of his life.
+          </p>
+          <p>
+            He went on to become the first wheelchair athlete to complete the
+            Hawaii Ironman and the first to swim the English Channel, then
+            took rowing silver at the 2008 Beijing Paralympics. Twenty-five
+            years after the accident, he relearned to walk.
+          </p>
+          <p className="rounded-lg border-l-4 px-4 py-3 italic text-brand-navy bg-brand-cream" style={{ borderColor: "#F4B400" }}>
+            "Son, look how far you've come… now how far can you go?"
+            <span className="block not-italic text-xs text-brand-muted mt-1">— John's father</span>
+          </p>
+          <p>
+            That question became his mission, and now it's yours. Set a goal
+            that matters, check in with your wins and the things that got in
+            the way, and John will help you take the next step — one stone
+            further than yesterday.
+          </p>
+        </div>
 
-        <p className="text-base text-foreground leading-relaxed">
-          This is your daily coach. Set a goal that matters to you, check in
-          with your wins and the things that got in the way, and John will help
-          you take the next step — one stone further than yesterday, using the
-          lessons from his own life.
-        </p>
+        <JohnVideos heading="Meet John" />
 
         {/* Mr Brown / stone intro */}
         <section className="rounded-xl bg-coach-panel p-5">
