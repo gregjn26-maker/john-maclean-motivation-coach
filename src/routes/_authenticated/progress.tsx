@@ -177,6 +177,35 @@ function ProgressPage() {
           </div>
         </div>
 
+        {/* 14-day chart */}
+        <section className="rounded-2xl bg-white border border-border p-5">
+          <h2 className="text-sm font-semibold text-brand-navy">Last 14 days</h2>
+          <p className="text-xs text-brand-muted mt-0.5">One bar per day. Green = hit, orange = partly, red = missed.</p>
+          <div className="mt-4 flex items-end gap-1.5 h-32">
+            {days.map((d, i) => {
+              const h = d.rating === "hit" ? 100 : d.rating === "partly" ? 55 : d.rating === "missed" ? 18 : 0;
+              const colour =
+                d.rating === "hit" ? "bg-brand-green" :
+                d.rating === "partly" ? "bg-brand-orange" :
+                d.rating === "missed" ? "bg-brand-red" :
+                "bg-brand-bg border border-dashed border-border";
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1">
+                  <div className="w-full flex items-end h-full">
+                    <div
+                      className={`w-full rounded-md ${colour}`}
+                      style={{ height: `${h || 6}%`, opacity: h === 0 ? 0.5 : 1 }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-brand-muted">{d.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+          </div>
+
+          <div className="space-y-5 lg:min-w-0">
         {/* Per-stone progress */}
         {goal && goal.stones.length > 0 && (
           <section className="rounded-2xl bg-white border border-border p-5">
