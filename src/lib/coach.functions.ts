@@ -101,16 +101,32 @@ function buildUserMessage(
       bigGoal.stones.forEach((s, i) => {
         const streak = untouchedStreak(s.text, past);
         const todayMatch = today.stone_statuses.find((t) => normaliseText(t.text) === normaliseText(s.text));
-        const hasTarget = typeof s.target === "number" && s.target > 0;
+        const metric = getMetric(s);
         const unit = (s.unit ?? "").trim();
         const cadence = s.cadence === "week" ? "per week" : s.cadence === "month" ? "per month" : s.cadence === "quarter" ? "per quarter" : s.cadence === "day" ? "per day" : "";
-        const targetStr = hasTarget ? ` — target ${s.target}${unit ? " " + unit : ""}${cadence ? " " + cadence : ""}` : "";
+
+        let targetStr = "";
+        if (metric === "count" && typeof s.target === "number" && s.target > 0) {
+          targetStr = ` — type COUNT, target ${s.target}${unit ? " " + unit : ""}${cadence ? " " + cadence : ""}`;
+        } else if (metric === "rate" && typeof s.target === "number" && s.target > 0) {
+          const num = (s.numerator_label ?? "").trim();
+          const den = (s.denominator_label ?? "").trim();
+          const ratio = num && den ? ` (${num} / ${den})` : "";
+          targetStr = ` — type RATE, target ${s.target}%${ratio}${cadence ? " " + cadence : ""}`;
+        } else {
+          targetStr = " — type YES/NO HABIT";
+        }
 
         let status: string;
         if (todayMatch) {
-          if (hasTarget) {
+          if (metric === "count") {
             const amt = typeof todayMatch.amount === "number" ? todayMatch.amount : (todayMatch.worked ? "(yes, no number)" : 0);
-            status = `this check-in: ${amt}${unit ? " " + unit : ""} (target ${s.target})`;
+            status = `this check-in: ${amt}${unit ? " " + unit : ""}`;
+          } else if (metric === "rate") {
+            const ach = typeof todayMatch.achieved === "number" ? todayMatch.achieved : 0;
+            const tot = typeof todayMatch.total === "number" ? todayMatch.total : 0;
+            const pct = tot > 0 ? Math.round((ach / tot) * 100) : 0;
+            status = `this check-in: ${ach} of ${tot} (${pct}%)`;
           } else {
             status = todayMatch.worked ? "WORKED ON since last check-in" : "did NOT work on since last check-in";
           }
@@ -118,9 +134,33 @@ function buildUserMessage(
           status = "no answer this check-in";
         }
 
-        // Recent actuals (most recent 5 check-ins) for measurable stones
+        // Period-aggregated progress for rate stones — combine across current period.
+        let periodInfo = "";
+        if (metric === "rate" && typeof s.target === "number" && s.target > 0) {
+          const period = currentPeriodRange(s.cadence);
+          let ach = 0;
+          let tot = 0;
+          const todayPlusPast = [
+            { ...today, check_in_date: "today", reply: "", nudged_stone: "", created_at: new Date().toISOString() } as PastCheckIn & { created_at: string },
+            ...past.map((p) => ({ ...p, created_at: (p as PastCheckIn & { created_at?: string }).created_at ?? p.check_in_date })),
+          ];
+          for (const p of todayPlusPast) {
+            const ts = new Date(p.created_at);
+            if (period && (ts < period.start || ts >= period.end)) continue;
+            const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
+            const m = arr.find((x) => normaliseText(x.text) === normaliseText(s.text));
+            if (!m) continue;
+            if (typeof m.achieved === "number") ach += m.achieved;
+            if (typeof m.total === "number") tot += m.total;
+          }
+          const pct = tot > 0 ? Math.round((ach / tot) * 100) : 0;
+          const periodLbl = period?.label ?? "all-time";
+          periodInfo = `; ${periodLbl}: ${ach} of ${tot} = ${pct}% (target ${s.target}%)`;
+        }
+
+        // Recent actuals for count stones (most recent 5 check-ins)
         let recent = "";
-        if (hasTarget) {
+        if (metric === "count" && typeof s.target === "number" && s.target > 0) {
           const recentVals = past.slice(0, 5).map((p) => {
             const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
             const m = arr.find((x) => normaliseText(x.text) === normaliseText(s.text));
@@ -132,7 +172,7 @@ function buildUserMessage(
         }
 
         const nudged = recentlyNudged(s.text, past) ? "  [you already nudged this step in the last 2 check-ins]" : "";
-        goalBlock += `  ${i + 1}. ${s.text}${targetStr} — ${status}${recent}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
+        goalBlock += `  ${i + 1}. ${s.text}${targetStr} — ${status}${periodInfo}${recent}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
       });
     }
     goalBlock += "\n---\n\n";
