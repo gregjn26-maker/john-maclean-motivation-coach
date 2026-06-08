@@ -101,11 +101,8 @@ function GoalsPage() {
 
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
-      <AppHeader
-        rightExtra={
-          <Link to="/" className="text-xs text-white/80 hover:text-white">Back</Link>
-        }
-      />
+      <AppHeader back={{ to: "/" }} />
+
       <div className="mx-auto max-w-xl px-5 pt-5 mb-3">
         <h1 className="text-xl font-semibold text-brand-navy leading-tight">My Goals</h1>
         <p className="text-sm text-brand-muted">Your big goal and the stones that get you there</p>
