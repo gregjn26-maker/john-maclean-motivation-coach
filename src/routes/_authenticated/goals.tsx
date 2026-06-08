@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Play, Plus, X } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
-import { JohnVideos } from "@/components/john-videos";
 
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
@@ -167,7 +166,6 @@ function GoalsPage() {
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : (
           <form onSubmit={onSubmit} className="space-y-6 text-left">
-            <JohnVideos heading="Watch John" />
 
             {/* Coaching intro */}
             <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}>
@@ -179,6 +177,23 @@ function GoalsPage() {
                   </p>
                   <p>
                     So set your big goal — that's your pole. Then break it into as many small, achievable stones as you can: the daily and weekly wins you can actually tick off. Hit enough of them, and one day you'll look up and the pole will be right there. Where's your pole — and where will you put your first stone today?
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* <<-- REPLACE WITH JOHN'S PERSONAL VIMEO LINK WHEN READY -->> */}
+            <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#0A2540" }}>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-white/10 inline-flex items-center justify-center text-white">
+                  <Play className="h-5 w-5 fill-white" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-white leading-relaxed">
+                    A personal message from John — coming soon.
+                  </p>
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    John will talk you through turning your big goal into stones you can actually move.
                   </p>
                 </div>
               </div>
