@@ -1,12 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Target, BarChart3, Info } from "lucide-react";
 
-const items = [
+const items: Array<{ to: "/" | "/goals" | "/progress" | "/welcome"; label: string; icon: typeof Home; exact?: boolean }> = [
   { to: "/", label: "Check-in", icon: Home, exact: true },
   { to: "/goals", label: "My Goals", icon: Target },
   { to: "/progress", label: "Progress", icon: BarChart3 },
   { to: "/welcome", label: "Intro", icon: Info },
-] as const;
+];
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
