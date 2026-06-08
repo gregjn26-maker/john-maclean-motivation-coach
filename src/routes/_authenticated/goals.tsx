@@ -71,7 +71,11 @@ function GoalsPage() {
             s.length
               ? s.map((x) => {
                   const hasTarget = typeof x.target === "number" && x.target > 0;
-                  const cadence = (x.cadence === "week" ? "week" : "day") as "day" | "week";
+                  const cadence: Cadence =
+                    x.cadence === "week" ? "week"
+                    : x.cadence === "month" ? "month"
+                    : x.cadence === "quarter" ? "quarter"
+                    : "day";
                   return {
                     text: x.text ?? "",
                     measurable: hasTarget,
