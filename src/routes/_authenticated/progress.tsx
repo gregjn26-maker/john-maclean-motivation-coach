@@ -223,7 +223,76 @@ function ProgressPage() {
               {goal.stones.map((stone, i) => {
                 const measurable = typeof stone.target === "number" && stone.target > 0;
                 const unit = (stone.unit ?? "").trim();
-                const cadenceLbl = stone.cadence === "week" ? "per wk" : "per day";
+                const cadence = stone.cadence ?? "";
+                const isPeriod = cadence === "month" || cadence === "quarter";
+                const cadenceLbl =
+                  cadence === "week" ? "per wk"
+                  : cadence === "month" ? "per mo"
+                  : cadence === "quarter" ? "per qtr"
+                  : "per day";
+
+                if (measurable && isPeriod) {
+                  const now = new Date();
+                  let periodStart: Date;
+                  let periodEnd: Date;
+                  let periodLbl: string;
+                  if (cadence === "month") {
+                    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                    periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    periodLbl = "this month";
+                  } else {
+                    const q = Math.floor(now.getMonth() / 3);
+                    periodStart = new Date(now.getFullYear(), q * 3, 1);
+                    periodEnd = new Date(now.getFullYear(), q * 3 + 3, 1);
+                    periodLbl = "this quarter";
+                  }
+                  const key = normaliseText(stone.text);
+                  let total = 0;
+                  for (const r of rows) {
+                    const t = new Date(r.created_at);
+                    if (t < periodStart || t >= periodEnd) continue;
+                    const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+                    const m = arr.find((x) => normaliseText(x.text) === key);
+                    if (m && typeof m.amount === "number") total += m.amount;
+                  }
+                  const target = stone.target as number;
+                  const periodMs = periodEnd.getTime() - periodStart.getTime();
+                  const elapsed = Math.min(1, Math.max(0, (now.getTime() - periodStart.getTime()) / periodMs));
+                  const expected = target * elapsed;
+                  const onTrack = expected > 0 ? total / expected : (total >= target ? 1 : 0);
+                  const completionPct = Math.min(100, Math.round((total / target) * 100));
+                  const barColour =
+                    onTrack >= 1 ? "bg-brand-green" : onTrack >= 0.7 ? "bg-brand-gold" : "bg-brand-red";
+                  const statusText =
+                    onTrack >= 1 ? "text-brand-green" : onTrack >= 0.7 ? "text-brand-gold" : "text-brand-red";
+                  const statusLabel =
+                    onTrack >= 1 ? "On track" : onTrack >= 0.7 ? "Close" : "Behind";
+                  const totalDisplay = Number.isInteger(total) ? total.toString() : total.toFixed(1);
+                  return (
+                    <div key={i}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-brand-text font-medium break-words">
+                          {stone.text}
+                          {unit && <span className="text-brand-muted font-normal"> — {unit}</span>}
+                        </p>
+                        <span className={`text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 ${statusText}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden">
+                          <div className={`h-full ${barColour} rounded-full`} style={{ width: `${completionPct}%` }} />
+                        </div>
+                        <span className="text-xs text-brand-muted text-right tabular-nums whitespace-nowrap">
+                          {totalDisplay}/{target}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted mt-1">
+                        total {periodLbl} — {Math.round(elapsed * 100)}% of period elapsed
+                      </p>
+                    </div>
+                  );
+                }
 
                 if (measurable) {
                   const key = normaliseText(stone.text);
