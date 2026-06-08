@@ -2,14 +2,22 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const StoneStatusSchema = z.object({
+  text: z.string().trim().min(1).max(200),
+  worked: z.boolean(),
+});
+
 const CheckInInput = z.object({
   goals: z.string().trim().max(4000),
   wins: z.string().trim().max(4000),
   misses: z.string().trim().max(4000),
+  stone_statuses: z.array(StoneStatusSchema).max(8).default([]),
 });
 
 const PRIMARY_MODEL = "claude-opus-4-7";
 const FALLBACK_MODEL = "claude-sonnet-4-6";
+
+interface StoneStatus { text: string; worked: boolean }
 
 interface PastCheckIn {
   check_in_date: string;
@@ -17,6 +25,8 @@ interface PastCheckIn {
   wins: string;
   misses: string;
   reply: string;
+  stone_statuses: StoneStatus[];
+  nudged_stone: string;
 }
 
 interface BigGoalContext {
@@ -25,26 +35,59 @@ interface BigGoalContext {
   stones: Array<{ text: string }>;
 }
 
+function normaliseText(s: string) {
+  return (s || "").trim().toLowerCase();
+}
+
+/**
+ * For a given stone, compute how many consecutive most-recent check-ins it
+ * has gone UNTOUCHED for (worked === false or absent). Stops at the first
+ * check-in where it was worked on.
+ */
+function untouchedStreak(stoneText: string, past: PastCheckIn[]): number {
+  const key = normaliseText(stoneText);
+  let streak = 0;
+  for (const p of past) {
+    const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
+    const match = arr.find((s) => normaliseText(s.text) === key);
+    if (match && match.worked) break;
+    streak++;
+  }
+  return streak;
+}
+
+function recentlyNudged(stoneText: string, past: PastCheckIn[]): boolean {
+  const key = normaliseText(stoneText);
+  return past.slice(0, 2).some((p) => normaliseText(p.nudged_stone) === key);
+}
+
 function buildUserMessage(
-  today: { goals: string; wins: string; misses: string },
+  today: { goals: string; wins: string; misses: string; stone_statuses: StoneStatus[] },
   past: PastCheckIn[],
   bigGoal: BigGoalContext | null,
+  nudgeCandidate: string | null,
 ) {
   let goalBlock = "";
   if (bigGoal && (bigGoal.big_goal || (bigGoal.stones && bigGoal.stones.length > 0))) {
-    goalBlock = "THIS USER'S BIG GOAL (always hold them to this — push them one stone further than yesterday):\n";
+    goalBlock = "THIS USER'S BIG GOAL:\n";
     if (bigGoal.big_goal) goalBlock += `Big goal: ${bigGoal.big_goal}\n`;
     if (bigGoal.target_date) goalBlock += `Target date: ${bigGoal.target_date}\n`;
     if (bigGoal.stones?.length) {
       goalBlock += `Stones (measurable steps):\n`;
-      bigGoal.stones.forEach((s, i) => { goalBlock += `  ${i + 1}. ${s.text}\n`; });
+      bigGoal.stones.forEach((s, i) => {
+        const streak = untouchedStreak(s.text, past);
+        const todayMatch = today.stone_statuses.find((t) => normaliseText(t.text) === normaliseText(s.text));
+        const status = todayMatch ? (todayMatch.worked ? "WORKED ON today" : "did NOT work on today") : "no answer today";
+        const nudged = recentlyNudged(s.text, past) ? "  [you already nudged this step in the last 2 check-ins]" : "";
+        goalBlock += `  ${i + 1}. ${s.text} — ${status}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
+      });
     }
     goalBlock += "\n---\n\n";
   }
 
   let memory = "";
   if (past.length > 0) {
-    memory = "Here are this user's most recent check-ins (most recent first), so you can refer back naturally:\n\n";
+    memory = "Most recent check-ins (most recent first):\n\n";
     past.forEach((p, i) => {
       memory += `--- Check-in ${i + 1} (${p.check_in_date}) ---\n`;
       memory += `Their goals: ${p.goals || "(none)"}\n`;
@@ -54,14 +97,32 @@ function buildUserMessage(
     });
     memory += "---\n\n";
   }
+
+  let rules =
+    `ACCOUNTABILITY RULES (apply when writing the reply):\n` +
+    `- Celebrate first. Lead with the wins. Respond to the misses in your real voice, with a relevant true story.\n` +
+    `- A step only counts as "neglected" once it has gone UNTOUCHED for 3 check-ins in a row.\n` +
+    `- If a step is neglected, nudge ONLY the single most neglected one — never list several.\n` +
+    `- Do not repeat a nudge on a step you already nudged in the last 2 check-ins.\n` +
+    `- The nudge is your ONE closing forward challenge, at the very end. Keep the reply tight and encouraging.\n` +
+    `- On days when nothing is neglected, just coach the wins/misses and end with a normal forward challenge.\n` +
+    `- Use Australian English.\n\n`;
+
+  if (nudgeCandidate) {
+    rules += `TODAY'S NUDGE TARGET: "${nudgeCandidate}". End your reply with one short, sharp closing challenge that points the user back to this step — one stone further than yesterday. Do not mention any other neglected step.\n\n`;
+  } else {
+    rules += `TODAY'S NUDGE TARGET: none. End with a normal forward challenge — do not single out any specific step as neglected.\n\n`;
+  }
+
   return (
     goalBlock +
     memory +
+    rules +
     `TODAY'S CHECK-IN (about yesterday):\n\n` +
     `Yesterday's goals:\n${today.goals || "(left blank)"}\n\n` +
     `Wins:\n${today.wins || "(left blank)"}\n\n` +
     `Misses:\n${today.misses || "(left blank)"}\n\n` +
-    `Now respond as John, following the pattern in your system prompt. Reference their big goal and the next stone where it fits naturally — hold them accountable to one stone further than yesterday. Use Australian English.`
+    `Now respond as John, following the pattern in your system prompt and the accountability rules above.`
   );
 }
 
@@ -104,7 +165,6 @@ export const submitCheckIn = createServerFn({ method: "POST" })
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
-    // Fetch system prompt
     const { data: settingRow, error: settingErr } = await supabase
       .from("app_settings")
       .select("value")
@@ -113,23 +173,31 @@ export const submitCheckIn = createServerFn({ method: "POST" })
     if (settingErr) throw new Error(`Failed to load coach prompt: ${settingErr.message}`);
     const systemPrompt = settingRow?.value ?? "You are John Maclean, a motivational coach.";
 
-    // Last 5 past check-ins
     const { data: pastRows, error: pastErr } = await supabase
       .from("check_ins")
-      .select("check_in_date, goals, wins, misses, reply")
+      .select("check_in_date, goals, wins, misses, reply, stone_statuses, nudged_stone")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(10);
     if (pastErr) throw new Error(`Failed to load history: ${pastErr.message}`);
 
-    // Big goal context
+    const past: PastCheckIn[] = (pastRows ?? []).map((r) => ({
+      check_in_date: r.check_in_date,
+      goals: r.goals,
+      wins: r.wins,
+      misses: r.misses,
+      reply: r.reply,
+      nudged_stone: r.nudged_stone ?? "",
+      stone_statuses: Array.isArray(r.stone_statuses) ? (r.stone_statuses as StoneStatus[]) : [],
+    }));
+
     const { data: goalRow, error: goalErr } = await supabase
       .from("goals")
       .select("big_goal, target_date, stones")
       .eq("user_id", userId)
       .maybeSingle();
     if (goalErr) throw new Error(`Failed to load goal: ${goalErr.message}`);
-    const bigGoal = goalRow
+    const bigGoal: BigGoalContext | null = goalRow
       ? {
           big_goal: goalRow.big_goal ?? "",
           target_date: goalRow.target_date ?? null,
@@ -137,7 +205,34 @@ export const submitCheckIn = createServerFn({ method: "POST" })
         }
       : null;
 
-    const userMessage = buildUserMessage(data, (pastRows ?? []) as PastCheckIn[], bigGoal);
+    // Decide today's nudge candidate (server-side, deterministic).
+    // Neglected = untouched streak >= 3 (counting today as untouched if not worked).
+    // Build a synthetic "today" history entry so streak counts include today.
+    const todayEntry: PastCheckIn = {
+      check_in_date: "today",
+      goals: data.goals,
+      wins: data.wins,
+      misses: data.misses,
+      reply: "",
+      nudged_stone: "",
+      stone_statuses: data.stone_statuses,
+    };
+    const historyForStreak = [todayEntry, ...past];
+
+    let nudgeCandidate: string | null = null;
+    if (bigGoal?.stones?.length) {
+      const scored = bigGoal.stones
+        .map((s) => ({
+          text: s.text,
+          streak: untouchedStreak(s.text, historyForStreak),
+          recentlyNudged: recentlyNudged(s.text, past),
+        }))
+        .filter((s) => s.streak >= 3 && !s.recentlyNudged)
+        .sort((a, b) => b.streak - a.streak);
+      nudgeCandidate = scored[0]?.text ?? null;
+    }
+
+    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate);
 
     let reply: string;
     try {
@@ -155,6 +250,8 @@ export const submitCheckIn = createServerFn({ method: "POST" })
         wins: data.wins,
         misses: data.misses,
         reply,
+        stone_statuses: data.stone_statuses,
+        nudged_stone: nudgeCandidate ?? "",
       })
       .select("id, created_at, check_in_date, goals, wins, misses, reply")
       .single();
