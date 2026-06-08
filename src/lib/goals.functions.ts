@@ -24,7 +24,7 @@ export const getMyGoal = createServerFn({ method: "GET" })
       .select("id, big_goal, target_date, stones, updated_at")
       .eq("user_id", userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[goals] load error:", error); throw new Error("Could not load your goal."); }
     return { goal: data };
   });
 
