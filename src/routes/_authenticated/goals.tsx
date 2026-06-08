@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyGoal, saveMyGoal } from "@/lib/goals.functions";
+import { getMyProfile, saveMyName } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,11 @@ function GoalsPage() {
   const navigate = useNavigate();
   const fetchGoal = useServerFn(getMyGoal);
   const save = useServerFn(saveMyGoal);
+  const fetchProfile = useServerFn(getMyProfile);
+  const persistName = useServerFn(saveMyName);
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [bigGoal, setBigGoal] = useState("");
   const [targetDate, setTargetDate] = useState("");
   const [stones, setStones] = useState<string[]>([""]);
@@ -39,18 +44,23 @@ function GoalsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchGoal({})
-      .then((res) => {
+    Promise.all([
+      fetchGoal({}).then((res) => {
         if (res.goal) {
           setBigGoal(res.goal.big_goal ?? "");
           setTargetDate(res.goal.target_date ?? "");
           const s = Array.isArray(res.goal.stones) ? (res.goal.stones as Array<{ text: string }>) : [];
           setStones(s.length ? s.map((x) => x.text) : [""]);
         }
-      })
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Couldn't load your goal."))
+      }),
+      fetchProfile({}).then((res) => {
+        setFirstName(res.profile?.first_name ?? "");
+        setLastName(res.profile?.last_name ?? "");
+      }),
+    ])
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Couldn't load your details."))
       .finally(() => setLoading(false));
-  }, [fetchGoal]);
+  }, [fetchGoal, fetchProfile]);
 
   function updateStone(i: number, val: string) {
     setStones((prev) => prev.map((s, idx) => (idx === i ? val : s)));
@@ -66,10 +76,12 @@ function GoalsPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const cleanedStones = stones.map((s) => s.trim()).filter(Boolean);
+    if (!firstName.trim()) return toast.error("Add your first name.");
     if (!bigGoal.trim()) return toast.error("Add your big goal.");
     if (cleanedStones.length < 1) return toast.error("Add at least 1 stone.");
     setSaving(true);
     try {
+      await persistName({ data: { first_name: firstName.trim(), last_name: lastName.trim() } });
       await save({
         data: {
           big_goal: bigGoal.trim(),
@@ -77,7 +89,7 @@ function GoalsPage() {
           stones: cleanedStones.map((text) => ({ text })),
         },
       });
-      toast.success("Goal saved.");
+      toast.success("Saved.");
       navigate({ to: "/" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save.");
@@ -116,6 +128,35 @@ function GoalsPage() {
                   <p>
                     So set your big goal — that's your pole. Then break it into as many small, achievable stones as you can: the daily and weekly wins you can actually tick off. Hit enough of them, and one day you'll look up and the pole will be right there. Where's your pole — and where will you put your first stone today?
                   </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Your name</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">What should John call you?</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">First name</Label>
+                  <Input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="e.g. Greg"
+                    className="text-base h-11"
+                    maxLength={60}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Last name <span className="text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder=""
+                    className="text-base h-11"
+                    maxLength={60}
+                  />
                 </div>
               </div>
             </section>

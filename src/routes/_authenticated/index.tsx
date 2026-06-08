@@ -4,7 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { submitCheckIn } from "@/lib/coach.functions";
 import { getMyGoal } from "@/lib/goals.functions";
+import { getMyProfile, saveMyName } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -13,8 +15,8 @@ import { Target, Pencil } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Daily check-in — John Maclean" },
-      { name: "description", content: "Log yesterday's goals, wins and misses, and hear from John." },
+      { title: "Your check-in — John Maclean" },
+      { name: "description", content: "Log your goals, wins and misses, and hear from John." },
     ],
   }),
   component: HomePage,
@@ -36,15 +38,27 @@ interface BigGoal {
   stones: Array<{ text: string }>;
 }
 
+function timeGreeting(name: string) {
+  const h = new Date().getHours();
+  const part = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return name ? `${part}, ${name}.` : `${part}.`;
+}
+
 function HomePage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState<string>("");
+  const [firstName, setFirstName] = useState<string>("");
+  const [nameLoaded, setNameLoaded] = useState(false);
+  const [needsName, setNeedsName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
   const [goals, setGoals] = useState("");
   const [wins, setWins] = useState("");
   const [misses, setMisses] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
   const [history, setHistory] = useState<PastCheckIn[]>([]);
+  const [checkInCount, setCheckInCount] = useState(0);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [bigGoal, setBigGoal] = useState<BigGoal | null>(null);
   const [goalLoaded, setGoalLoaded] = useState(false);
@@ -52,10 +66,21 @@ function HomePage() {
 
   const submit = useServerFn(submitCheckIn);
   const fetchGoal = useServerFn(getMyGoal);
+  const fetchProfile = useServerFn(getMyProfile);
+  const persistName = useServerFn(saveMyName);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+    fetchProfile({})
+      .then((res) => {
+        const fn = (res.profile?.first_name ?? "").trim();
+        setFirstName(fn);
+        if (!fn) setNeedsName(true);
+      })
+      .catch(() => {})
+      .finally(() => setNameLoaded(true));
+
     loadHistory();
+
     fetchGoal({})
       .then((res) => {
         const g = res.goal;
@@ -81,9 +106,9 @@ function HomePage() {
 
   async function loadHistory() {
     setLoadingHistory(true);
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from("check_ins")
-      .select("id, check_in_date, goals, wins, misses, reply, created_at")
+      .select("id, check_in_date, goals, wins, misses, reply, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(20);
     setLoadingHistory(false);
@@ -92,10 +117,28 @@ function HomePage() {
       return;
     }
     setHistory((data ?? []) as PastCheckIn[]);
+    setCheckInCount(count ?? (data?.length ?? 0));
   }
 
   function setTap(text: string, worked: boolean) {
     setStoneTaps((prev) => ({ ...prev, [text]: prev[text] === worked ? null : worked }));
+  }
+
+  async function onSaveName(e: React.FormEvent) {
+    e.preventDefault();
+    const v = nameInput.trim();
+    if (!v) return toast.error("Please enter your first name.");
+    setSavingName(true);
+    try {
+      await persistName({ data: { first_name: v, last_name: "" } });
+      setFirstName(v);
+      setNeedsName(false);
+      setNameInput("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save your name.");
+    } finally {
+      setSavingName(false);
+    }
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -127,10 +170,39 @@ function HomePage() {
     }
   }
 
-
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
+  }
+
+  // First-name capture screen (blocking) before the check-in form
+  if (nameLoaded && needsName) {
+    return (
+      <main className="min-h-screen bg-background flex items-center px-5 py-10">
+        <div className="mx-auto max-w-md w-full rounded-xl border border-border bg-card p-6">
+          <h1 className="text-xl font-semibold text-foreground">G'day.</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            What should John call you?
+          </p>
+          <form onSubmit={onSaveName} className="mt-5 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm">First name</Label>
+              <Input
+                autoFocus
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                placeholder="e.g. Greg"
+                className="text-base h-11"
+                maxLength={60}
+              />
+            </div>
+            <Button type="submit" disabled={savingName} className="w-full h-12 text-base">
+              {savingName ? "Saving…" : "Save"}
+            </Button>
+          </form>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -139,7 +211,7 @@ function HomePage() {
         <div className="mx-auto flex max-w-xl items-center justify-between px-5 py-3">
           <div>
             <h1 className="text-base font-semibold text-foreground leading-tight">John Maclean</h1>
-            <p className="text-xs text-muted-foreground leading-tight">Daily Coach</p>
+            <p className="text-xs text-muted-foreground leading-tight">Your Coach</p>
           </div>
           <div className="flex items-center gap-4">
             <Link to="/welcome" className="text-xs text-muted-foreground hover:text-foreground">
@@ -190,7 +262,7 @@ function HomePage() {
             {bigGoal.stones.length > 0 && (
               <div className="mt-4 space-y-2.5">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  Yesterday — did you work on each stone?
+                  Since last time — did you work on each stone?
                 </div>
                 {bigGoal.stones.map((s, i) => {
                   const tap = stoneTaps[s.text];
@@ -226,20 +298,27 @@ function HomePage() {
                 })}
               </div>
             )}
-
           </section>
         )}
 
         <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold text-foreground">Good morning{email ? `, ${email.split("@")[0]}` : ""}.</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Take a minute. How did yesterday go?
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">{timeGreeting(firstName)}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Take a minute. How have things been since last time?
+              </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-2xl font-bold text-primary leading-none">{checkInCount}</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1">check-ins</div>
+            </div>
+          </div>
 
           <form onSubmit={onSubmit} className="mt-5 space-y-4">
             <Field
-              label="Yesterday's goals"
-              placeholder="What did you set out to do yesterday?"
+              label="Since your last check-in"
+              placeholder="What have you been working towards?"
               value={goals}
               onChange={setGoals}
             />
