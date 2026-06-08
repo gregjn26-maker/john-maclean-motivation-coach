@@ -102,8 +102,8 @@ function AccountPage() {
 
   async function onChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (!newPassword.trim()) {
+      toast.error("Please enter a new password.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -223,10 +223,9 @@ function AccountPage() {
                   id="new_password"
                   type="password"
                   autoComplete="new-password"
-                  minLength={6}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="Enter a new password"
                 />
               </div>
               <div className="space-y-2">
@@ -235,7 +234,6 @@ function AccountPage() {
                   id="confirm_password"
                   type="password"
                   autoComplete="new-password"
-                  minLength={6}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />

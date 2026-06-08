@@ -57,8 +57,8 @@ function AuthPage() {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) return;
-    if (mode === "signup" && password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (mode === "signup" && !password.trim()) {
+      toast.error("Please enter a password.");
       return;
     }
     setSubmitting(true);
@@ -121,7 +121,6 @@ function AuthPage() {
               type="password"
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
               required
-              minLength={6}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
