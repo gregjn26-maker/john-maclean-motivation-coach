@@ -306,7 +306,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       })
       .select("id, created_at, check_in_date, goals, wins, misses, reply, overall_rating")
       .single();
-    if (insertErr) throw new Error(`Failed to save check-in: ${insertErr.message}`);
+    if (insertErr) { console.error("[coach] save check-in:", insertErr); throw new Error("Could not save your check-in."); }
 
     return { checkIn: inserted, reply };
   });
