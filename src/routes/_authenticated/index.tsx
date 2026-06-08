@@ -33,10 +33,17 @@ interface PastCheckIn {
   created_at: string;
 }
 
+interface StoneMeta {
+  text: string;
+  target?: number | null;
+  unit?: string;
+  cadence?: string;
+}
+
 interface BigGoal {
   big_goal: string;
   target_date: string | null;
-  stones: Array<{ text: string }>;
+  stones: StoneMeta[];
 }
 
 type Rating = "" | "hit" | "partly" | "missed";
