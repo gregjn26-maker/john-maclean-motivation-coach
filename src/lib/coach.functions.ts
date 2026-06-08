@@ -92,6 +92,8 @@ function currentPeriodRange(cadence: string | undefined):
     return { start: d, end, label: "today" };
   }
   return null;
+}
+
 
 /**
  * For a given stone, compute how many consecutive most-recent check-ins it
