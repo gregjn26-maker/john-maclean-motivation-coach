@@ -17,6 +17,8 @@ interface StoneStatus {
   text: string;
   worked: boolean;
   amount?: number | null;
+  achieved?: number | null;
+  total?: number | null;
 }
 
 interface CheckInRow {
@@ -32,6 +34,14 @@ interface StoneMeta {
   target?: number | null;
   unit?: string;
   cadence?: string;
+  metric?: "count" | "rate" | "habit";
+  numerator_label?: string;
+  denominator_label?: string;
+}
+
+function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
+  if (s.metric === "count" || s.metric === "rate" || s.metric === "habit") return s.metric;
+  return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
 }
 
 interface GoalData {
