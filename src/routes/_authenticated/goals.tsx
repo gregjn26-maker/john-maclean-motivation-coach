@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
+import { JohnVideos } from "@/components/john-videos";
 
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
