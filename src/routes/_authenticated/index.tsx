@@ -183,15 +183,45 @@ function HomePage() {
               </Link>
             </div>
             {bigGoal.stones.length > 0 && (
-              <ul className="mt-3 space-y-1.5 pl-6">
-                {bigGoal.stones.map((s, i) => (
-                  <li key={i} className="text-xs text-foreground/80 flex gap-2">
-                    <span className="text-primary">▸</span>
-                    <span className="break-words">{s.text}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4 space-y-2.5">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                  Yesterday — did you work on each stone?
+                </div>
+                {bigGoal.stones.map((s, i) => {
+                  const tap = stoneTaps[s.text];
+                  return (
+                    <div key={i} className="rounded-lg border border-border bg-background p-2.5">
+                      <p className="text-sm text-foreground break-words mb-2">{s.text}</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTap(s.text, true)}
+                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                            tap === true
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                          }`}
+                        >
+                          Worked on it
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTap(s.text, false)}
+                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                            tap === false
+                              ? "bg-muted text-foreground border-foreground/40"
+                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                          }`}
+                        >
+                          Didn't
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
+
           </section>
         )}
 
