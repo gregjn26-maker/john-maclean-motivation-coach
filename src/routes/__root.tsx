@@ -78,10 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "John Maclean — Daily Coach" },
+      { title: "John Maclean — Motivation Coach" },
       { name: "description", content: "Daily morning check-in coached in the voice of John Maclean OAM." },
-      { name: "author", content: "John Maclean Daily Coach" },
-      { property: "og:title", content: "John Maclean — Daily Coach" },
+      { name: "author", content: "John Maclean Motivation Coach" },
+      { property: "og:title", content: "John Maclean — Motivation Coach" },
       { property: "og:description", content: "Daily morning check-in coached in the voice of John Maclean OAM." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
