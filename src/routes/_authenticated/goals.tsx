@@ -30,17 +30,28 @@ function JMAvatar() {
 }
 
 type Cadence = "day" | "week" | "month" | "quarter";
+type Metric = "count" | "rate" | "habit";
 
 type StoneForm = {
   text: string;
-  measurable: boolean;
+  metric: Metric;
   target: string;
   unit: string;
   cadence: Cadence;
+  numerator_label: string;
+  denominator_label: string;
 };
 
 function emptyStone(): StoneForm {
-  return { text: "", measurable: false, target: "", unit: "", cadence: "day" };
+  return {
+    text: "",
+    metric: "habit",
+    target: "",
+    unit: "",
+    cadence: "day",
+    numerator_label: "",
+    denominator_label: "",
+  };
 }
 
 function GoalsPage() {
