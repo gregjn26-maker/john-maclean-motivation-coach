@@ -40,7 +40,7 @@ function AuthPage() {
     setSending(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/auth` },
     });
     setSending(false);
     if (error) {
