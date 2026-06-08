@@ -13,11 +13,67 @@ export const Route = createFileRoute("/_authenticated/progress")({
   component: ProgressPage,
 });
 
+interface StoneStatus {
+  text: string;
+  worked: boolean;
+}
+
 interface CheckInRow {
   id: string;
   created_at: string;
   overall_rating: string;
   reply: string;
+  stone_statuses: StoneStatus[];
+}
+
+interface GoalData {
+  big_goal: string;
+  stones: Array<{ text: string }>;
+}
+
+function normaliseText(s: string) {
+  return (s || "").trim().toLowerCase();
+}
+
+function stoneWorkedCount(stoneText: string, past: CheckInRow[]): number {
+  const key = normaliseText(stoneText);
+  let count = 0;
+  for (const p of past.slice(0, 14)) {
+    const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
+    const match = arr.find((s) => normaliseText(s.text) === key);
+    if (match && match.worked) count++;
+  }
+  return count;
+}
+
+function stoneUntouchedStreak(stoneText: string, past: CheckInRow[]): number {
+  const key = normaliseText(stoneText);
+  let streak = 0;
+  for (const p of past) {
+    const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
+    const match = arr.find((s) => normaliseText(s.text) === key);
+    if (match && match.worked) break;
+    streak++;
+  }
+  return streak;
+}
+
+function attentionColour(streak: number): string {
+  if (streak >= 3) return "bg-brand-red";
+  if (streak >= 1) return "bg-brand-gold";
+  return "bg-brand-green";
+}
+
+function attentionLabel(streak: number): string {
+  if (streak >= 3) return "Neglected";
+  if (streak >= 1) return "Slipping";
+  return "On track";
+}
+
+function attentionTextColour(streak: number): string {
+  if (streak >= 3) return "text-brand-red";
+  if (streak >= 1) return "text-brand-gold";
+  return "text-brand-green";
 }
 
 function ratingScore(r: string): number {
@@ -40,18 +96,32 @@ function ProgressPage() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<CheckInRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [goal, setGoal] = useState<GoalData | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data, error, count } = await supabase
-        .from("check_ins")
-        .select("id, created_at, overall_rating, reply", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const [{ data, error, count }, { data: goalData }] = await Promise.all([
+        supabase
+          .from("check_ins")
+          .select("id, created_at, overall_rating, reply, stone_statuses", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabase.from("goals").select("big_goal, stones").maybeSingle(),
+      ]);
       setLoading(false);
       if (error) return;
-      setRows((data ?? []) as CheckInRow[]);
+      const typedRows = (data ?? []).map((r) => ({
+        ...r,
+        stone_statuses: Array.isArray(r.stone_statuses) ? (r.stone_statuses as unknown as StoneStatus[]) : [],
+      }));
+      setRows(typedRows as CheckInRow[]);
       setTotal(count ?? data?.length ?? 0);
+      if (goalData) {
+        setGoal({
+          big_goal: goalData.big_goal ?? "",
+          stones: Array.isArray(goalData.stones) ? (goalData.stones as Array<{ text: string }>) : [],
+        });
+      }
     })();
   }, []);
 
@@ -104,6 +174,40 @@ function ProgressPage() {
             <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Goals hit</div>
           </div>
         </div>
+
+        {/* Per-stone progress */}
+        {goal && goal.stones.length > 0 && (
+          <section className="rounded-2xl bg-white border border-border p-5">
+            <h2 className="text-sm font-semibold text-brand-navy">Your goal steps</h2>
+            <p className="text-xs text-brand-muted mt-0.5 break-words">{goal.big_goal}</p>
+            <div className="mt-4 space-y-4">
+              {goal.stones.map((stone, i) => {
+                const streak = stoneUntouchedStreak(stone.text, rows);
+                const worked = stoneWorkedCount(stone.text, rows);
+                const barColour = attentionColour(streak);
+                const statusLabel = attentionLabel(streak);
+                const statusText = attentionTextColour(streak);
+                const pct = Math.min(100, Math.round((worked / 14) * 100));
+                return (
+                  <div key={i}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm text-brand-text font-medium break-words">{stone.text}</p>
+                      <span className={`text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 ${statusText}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden">
+                        <div className={`h-full ${barColour} rounded-full`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-brand-muted w-12 text-right tabular-nums">{worked} of 14</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* 14-day chart */}
         <section className="rounded-2xl bg-white border border-border p-5">
