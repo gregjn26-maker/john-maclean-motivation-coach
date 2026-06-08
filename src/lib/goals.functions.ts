@@ -4,6 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const StoneSchema = z.object({
   text: z.string().trim().min(1).max(200),
+  target: z.number().min(0).max(100000).nullable().optional(),
+  unit: z.string().trim().max(40).optional().default(""),
+  cadence: z.enum(["day", "week", ""]).optional().default(""),
 });
 
 const GoalInput = z.object({

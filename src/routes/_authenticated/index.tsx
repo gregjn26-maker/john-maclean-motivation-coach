@@ -33,10 +33,17 @@ interface PastCheckIn {
   created_at: string;
 }
 
+interface StoneMeta {
+  text: string;
+  target?: number | null;
+  unit?: string;
+  cadence?: string;
+}
+
 interface BigGoal {
   big_goal: string;
   target_date: string | null;
-  stones: Array<{ text: string }>;
+  stones: StoneMeta[];
 }
 
 type Rating = "" | "hit" | "partly" | "missed";
@@ -68,6 +75,7 @@ function HomePage() {
   const [bigGoal, setBigGoal] = useState<BigGoal | null>(null);
   const [goalLoaded, setGoalLoaded] = useState(false);
   const [stoneTaps, setStoneTaps] = useState<Record<string, boolean | null>>({});
+  const [stoneAmounts, setStoneAmounts] = useState<Record<string, string>>({});
 
   const submit = useServerFn(submitCheckIn);
   const fetchGoal = useServerFn(getMyGoal);
@@ -90,15 +98,17 @@ function HomePage() {
       .then((res) => {
         const g = res.goal;
         if (g) {
-          const stones = Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [];
+          const stones = Array.isArray(g.stones) ? (g.stones as unknown as StoneMeta[]) : [];
           setBigGoal({
             big_goal: g.big_goal ?? "",
             target_date: g.target_date ?? null,
             stones,
           });
-          const initial: Record<string, boolean | null> = {};
-          stones.forEach((s) => { initial[s.text] = null; });
-          setStoneTaps(initial);
+          const initialTaps: Record<string, boolean | null> = {};
+          const initialAmts: Record<string, string> = {};
+          stones.forEach((s) => { initialTaps[s.text] = null; initialAmts[s.text] = ""; });
+          setStoneTaps(initialTaps);
+          setStoneAmounts(initialAmts);
         } else {
           let seen = false;
           try { seen = localStorage.getItem("jm_welcome_seen") === "1"; } catch {}
@@ -157,8 +167,20 @@ function HomePage() {
     setSubmittedSummary(null);
     try {
       const stone_statuses = (bigGoal?.stones ?? [])
-        .filter((s) => stoneTaps[s.text] === true || stoneTaps[s.text] === false)
-        .map((s) => ({ text: s.text, worked: !!stoneTaps[s.text] }));
+        .map((s) => {
+          const measurable = typeof s.target === "number" && s.target > 0;
+          if (measurable) {
+            const raw = (stoneAmounts[s.text] ?? "").trim();
+            if (raw === "") return null;
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n < 0) return null;
+            return { text: s.text, worked: n > 0, amount: n };
+          }
+          const tap = stoneTaps[s.text];
+          if (tap !== true && tap !== false) return null;
+          return { text: s.text, worked: tap };
+        })
+        .filter((x): x is { text: string; worked: boolean; amount?: number } => x !== null);
       const summary = { goals, wins, misses };
       const result = await submit({ data: { ...summary, stone_statuses, overall_rating: rating } });
       setReply(result.reply);
@@ -167,9 +189,11 @@ function HomePage() {
       setWins("");
       setMisses("");
       setRating("");
-      const cleared: Record<string, boolean | null> = {};
-      (bigGoal?.stones ?? []).forEach((s) => { cleared[s.text] = null; });
-      setStoneTaps(cleared);
+      const clearedTaps: Record<string, boolean | null> = {};
+      const clearedAmts: Record<string, string> = {};
+      (bigGoal?.stones ?? []).forEach((s) => { clearedTaps[s.text] = null; clearedAmts[s.text] = ""; });
+      setStoneTaps(clearedTaps);
+      setStoneAmounts(clearedAmts);
       loadHistory();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
@@ -270,34 +294,63 @@ function HomePage() {
                   Did you work on each stone?
                 </div>
                 {bigGoal.stones.map((s, i) => {
+                  const measurable = typeof s.target === "number" && s.target > 0;
                   const tap = stoneTaps[s.text];
+                  const cadenceLbl = s.cadence === "week" ? "this week" : "today";
+                  const unit = (s.unit ?? "").trim();
                   return (
                     <div key={i} className="rounded-lg bg-brand-bg p-2.5">
-                      <p className="text-sm text-brand-text break-words mb-2">{s.text}</p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setTap(s.text, true)}
-                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                            tap === true
-                              ? "bg-brand-green text-white border-brand-green"
-                              : "bg-white text-brand-muted border-border hover:text-brand-text"
-                          }`}
-                        >
-                          Worked on it
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTap(s.text, false)}
-                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                            tap === false
-                              ? "bg-brand-red text-white border-brand-red"
-                              : "bg-white text-brand-muted border-border hover:text-brand-text"
-                          }`}
-                        >
-                          Didn't
-                        </button>
+                      <div className="flex items-baseline justify-between gap-2 mb-2">
+                        <p className="text-sm text-brand-text break-words font-medium">{s.text}</p>
+                        {measurable && (
+                          <span className="text-[11px] text-brand-muted flex-shrink-0">
+                            target {s.target}{unit ? ` ${unit}` : ""} {s.cadence === "week" ? "/wk" : "/day"}
+                          </span>
+                        )}
                       </div>
+                      {measurable ? (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-brand-muted whitespace-nowrap">
+                            {unit ? `${unit.charAt(0).toUpperCase() + unit.slice(1)} ${cadenceLbl}:` : `${cadenceLbl}:`}
+                          </Label>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            value={stoneAmounts[s.text] ?? ""}
+                            onChange={(e) =>
+                              setStoneAmounts((prev) => ({ ...prev, [s.text]: e.target.value }))
+                            }
+                            placeholder="0"
+                            className="h-9 w-24 text-base bg-white"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setTap(s.text, true)}
+                            className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                              tap === true
+                                ? "bg-brand-green text-white border-brand-green"
+                                : "bg-white text-brand-muted border-border hover:text-brand-text"
+                            }`}
+                          >
+                            Worked on it
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTap(s.text, false)}
+                            className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                              tap === false
+                                ? "bg-brand-red text-white border-brand-red"
+                                : "bg-white text-brand-muted border-border hover:text-brand-text"
+                            }`}
+                          >
+                            Didn't
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

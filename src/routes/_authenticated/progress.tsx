@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/progress")({
 interface StoneStatus {
   text: string;
   worked: boolean;
+  amount?: number | null;
 }
 
 interface CheckInRow {
@@ -26,9 +27,16 @@ interface CheckInRow {
   stone_statuses: StoneStatus[];
 }
 
+interface StoneMeta {
+  text: string;
+  target?: number | null;
+  unit?: string;
+  cadence?: string;
+}
+
 interface GoalData {
   big_goal: string;
-  stones: Array<{ text: string }>;
+  stones: StoneMeta[];
 }
 
 function normaliseText(s: string) {
@@ -119,7 +127,7 @@ function ProgressPage() {
       if (goalData) {
         setGoal({
           big_goal: goalData.big_goal ?? "",
-          stones: Array.isArray(goalData.stones) ? (goalData.stones as Array<{ text: string }>) : [],
+          stones: Array.isArray(goalData.stones) ? (goalData.stones as unknown as StoneMeta[]) : [],
         });
       }
     })();
@@ -213,6 +221,59 @@ function ProgressPage() {
             <p className="text-xs text-brand-muted mt-0.5 break-words">{goal.big_goal}</p>
             <div className="mt-4 space-y-4">
               {goal.stones.map((stone, i) => {
+                const measurable = typeof stone.target === "number" && stone.target > 0;
+                const unit = (stone.unit ?? "").trim();
+                const cadenceLbl = stone.cadence === "week" ? "per wk" : "per day";
+
+                if (measurable) {
+                  const key = normaliseText(stone.text);
+                  const recent = rows.slice(0, 14);
+                  const vals: number[] = [];
+                  for (const r of recent) {
+                    const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+                    const m = arr.find((x) => normaliseText(x.text) === key);
+                    if (!m) continue;
+                    if (typeof m.amount === "number") vals.push(m.amount);
+                    else if (m.worked) continue; // no number recorded; skip
+                    else vals.push(0);
+                  }
+                  const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+                  const target = stone.target as number;
+                  const ratio = target > 0 ? avg / target : 0;
+                  const pct = Math.min(100, Math.round(ratio * 100));
+                  const barColour =
+                    ratio >= 1 ? "bg-brand-green" : ratio >= 0.7 ? "bg-brand-gold" : "bg-brand-red";
+                  const statusText =
+                    ratio >= 1 ? "text-brand-green" : ratio >= 0.7 ? "text-brand-gold" : "text-brand-red";
+                  const statusLabel =
+                    ratio >= 1 ? "On target" : ratio >= 0.7 ? "Close" : "Under";
+                  const avgDisplay = Number.isInteger(avg) ? avg.toString() : avg.toFixed(1);
+                  return (
+                    <div key={i}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-brand-text font-medium break-words">
+                          {stone.text}
+                          {unit && <span className="text-brand-muted font-normal"> — {unit}</span>}
+                        </p>
+                        <span className={`text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 ${statusText}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden">
+                          <div className={`h-full ${barColour} rounded-full`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-brand-muted text-right tabular-nums whitespace-nowrap">
+                          {avgDisplay}/{target}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted mt-1">
+                        avg {cadenceLbl}, last {vals.length || 0} of 14 check-ins
+                      </p>
+                    </div>
+                  );
+                }
+
                 const streak = stoneUntouchedStreak(stone.text, rows);
                 const worked = stoneWorkedCount(stone.text, rows);
                 const barColour = attentionColour(streak);
