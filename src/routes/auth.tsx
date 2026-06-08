@@ -34,9 +34,7 @@ function AuthPage() {
       if (res.goal && (res.goal.big_goal ?? "").trim().length > 0) {
         navigate({ to: "/", replace: true });
       } else {
-        let seen = false;
-        try { seen = localStorage.getItem("jm_welcome_seen") === "1"; } catch {}
-        navigate({ to: seen ? "/goals" : "/welcome", replace: true });
+        navigate({ to: "/welcome", replace: true });
       }
     } catch {
       navigate({ to: "/welcome", replace: true });
