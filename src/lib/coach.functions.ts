@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const StoneStatusSchema = z.object({
   text: z.string().trim().min(1).max(200),
   worked: z.boolean(),
+  amount: z.number().min(0).max(1000000).nullable().optional(),
 });
 
 const CheckInInput = z.object({
