@@ -326,11 +326,9 @@ function GoalsPage() {
                   </div>
                 ))}
               </div>
-              {stones.length < 5 && (
-                <Button type="button" variant="outline" onClick={addStone} className="w-full">
-                  <Plus className="h-4 w-4 mr-1" /> Add stone
-                </Button>
-              )}
+              <Button type="button" variant="outline" onClick={addStone} className="w-full">
+                <Plus className="h-4 w-4 mr-1" /> Add stone
+              </Button>
             </section>
 
             <Button
