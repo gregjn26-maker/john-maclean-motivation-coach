@@ -167,8 +167,20 @@ function HomePage() {
     setSubmittedSummary(null);
     try {
       const stone_statuses = (bigGoal?.stones ?? [])
-        .filter((s) => stoneTaps[s.text] === true || stoneTaps[s.text] === false)
-        .map((s) => ({ text: s.text, worked: !!stoneTaps[s.text] }));
+        .map((s) => {
+          const measurable = typeof s.target === "number" && s.target > 0;
+          if (measurable) {
+            const raw = (stoneAmounts[s.text] ?? "").trim();
+            if (raw === "") return null;
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n < 0) return null;
+            return { text: s.text, worked: n > 0, amount: n };
+          }
+          const tap = stoneTaps[s.text];
+          if (tap !== true && tap !== false) return null;
+          return { text: s.text, worked: tap };
+        })
+        .filter((x): x is { text: string; worked: boolean; amount?: number } => x !== null);
       const summary = { goals, wins, misses };
       const result = await submit({ data: { ...summary, stone_statuses, overall_rating: rating } });
       setReply(result.reply);
@@ -177,9 +189,11 @@ function HomePage() {
       setWins("");
       setMisses("");
       setRating("");
-      const cleared: Record<string, boolean | null> = {};
-      (bigGoal?.stones ?? []).forEach((s) => { cleared[s.text] = null; });
-      setStoneTaps(cleared);
+      const clearedTaps: Record<string, boolean | null> = {};
+      const clearedAmts: Record<string, string> = {};
+      (bigGoal?.stones ?? []).forEach((s) => { clearedTaps[s.text] = null; clearedAmts[s.text] = ""; });
+      setStoneTaps(clearedTaps);
+      setStoneAmounts(clearedAmts);
       loadHistory();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
