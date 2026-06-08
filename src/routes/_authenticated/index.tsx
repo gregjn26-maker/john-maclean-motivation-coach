@@ -185,8 +185,9 @@ function HomePage() {
     setReply(null);
     setSubmittedSummary(null);
     try {
-      const stone_statuses = (bigGoal?.stones ?? [])
-        .map((s) => {
+      type Status = { text: string; worked: boolean; amount?: number; achieved?: number; total?: number };
+      const stone_statuses: Status[] = (bigGoal?.stones ?? [])
+        .map((s): Status | null => {
           const metric = stoneMetric(s);
           if (metric === "count") {
             const raw = (stoneAmounts[s.text] ?? "").trim();
@@ -208,7 +209,7 @@ function HomePage() {
           if (tap !== true && tap !== false) return null;
           return { text: s.text, worked: tap };
         })
-        .filter((x): x is { text: string; worked: boolean; amount?: number; achieved?: number; total?: number } => x !== null);
+        .filter((x): x is Status => x !== null);
       const summary = { goals, wins, misses };
       const result = await submit({ data: { ...summary, stone_statuses, overall_rating: rating } });
       setReply(result.reply);
