@@ -145,16 +145,31 @@ function GoalsPage() {
     <main className="min-h-screen bg-brand-bg pb-24">
       <AppHeader back={{ to: "/" }} />
 
-      <div className="mx-auto max-w-xl px-5 pt-5 mb-3">
-        <h1 className="text-xl font-semibold text-brand-navy leading-tight">My Goals</h1>
-        <p className="text-sm text-brand-muted">Your big goal and the stones that get you there</p>
-      </div>
+      {/* Coloured page banner */}
+      <section className="px-5 py-6 sm:py-8" style={{ backgroundColor: "#0A2540" }}>
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: "#F4B400" }} />
+            <span className="text-xs font-medium uppercase tracking-wide" style={{ color: "#F4B400" }}>
+              My Goals
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
+            Your big goal &amp; the stones that get you there
+          </h1>
+          <p className="text-sm text-white/70 mt-1">
+            Edit any time — your check-ins are built around this.
+          </p>
+        </div>
+      </section>
 
-      <div className="mx-auto max-w-xl px-5 pt-5">
+      <div className="mx-auto max-w-3xl px-5 pt-6">
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-6">
+          <form onSubmit={onSubmit} className="space-y-6 text-left">
+            <JohnVideos heading="Watch John" />
+
             {/* Coaching intro */}
             <section className="rounded-xl bg-coach-panel p-5 space-y-3">
               <div className="flex items-start gap-3">
