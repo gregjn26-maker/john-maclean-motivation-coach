@@ -294,35 +294,66 @@ function HomePage() {
                   Did you work on each stone?
                 </div>
                 {bigGoal.stones.map((s, i) => {
+                  const measurable = typeof s.target === "number" && s.target > 0;
                   const tap = stoneTaps[s.text];
+                  const cadenceLbl = s.cadence === "week" ? "this week" : "today";
+                  const unit = (s.unit ?? "").trim();
                   return (
                     <div key={i} className="rounded-lg bg-brand-bg p-2.5">
-                      <p className="text-sm text-brand-text break-words mb-2">{s.text}</p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setTap(s.text, true)}
-                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                            tap === true
-                              ? "bg-brand-green text-white border-brand-green"
-                              : "bg-white text-brand-muted border-border hover:text-brand-text"
-                          }`}
-                        >
-                          Worked on it
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTap(s.text, false)}
-                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
-                            tap === false
-                              ? "bg-brand-red text-white border-brand-red"
-                              : "bg-white text-brand-muted border-border hover:text-brand-text"
-                          }`}
-                        >
-                          Didn't
-                        </button>
+                      <div className="flex items-baseline justify-between gap-2 mb-2">
+                        <p className="text-sm text-brand-text break-words font-medium">{s.text}</p>
+                        {measurable && (
+                          <span className="text-[11px] text-brand-muted flex-shrink-0">
+                            target {s.target}{unit ? ` ${unit}` : ""} {s.cadence === "week" ? "/wk" : "/day"}
+                          </span>
+                        )}
                       </div>
+                      {measurable ? (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-brand-muted whitespace-nowrap">
+                            {unit ? `${unit.charAt(0).toUpperCase() + unit.slice(1)} ${cadenceLbl}:` : `${cadenceLbl}:`}
+                          </Label>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            value={stoneAmounts[s.text] ?? ""}
+                            onChange={(e) =>
+                              setStoneAmounts((prev) => ({ ...prev, [s.text]: e.target.value }))
+                            }
+                            placeholder="0"
+                            className="h-9 w-24 text-base bg-white"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setTap(s.text, true)}
+                            className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                              tap === true
+                                ? "bg-brand-green text-white border-brand-green"
+                                : "bg-white text-brand-muted border-border hover:text-brand-text"
+                            }`}
+                          >
+                            Worked on it
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTap(s.text, false)}
+                            className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                              tap === false
+                                ? "bg-brand-red text-white border-brand-red"
+                                : "bg-white text-brand-muted border-border hover:text-brand-text"
+                            }`}
+                          >
+                            Didn't
+                          </button>
+                        </div>
+                      )}
                     </div>
+                  );
+                })}
                   );
                 })}
               </div>
