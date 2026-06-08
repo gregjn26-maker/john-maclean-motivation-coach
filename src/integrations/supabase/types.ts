@@ -39,7 +39,9 @@ export type Database = {
           goals: string
           id: string
           misses: string
+          nudged_stone: string
           reply: string
+          stone_statuses: Json
           user_id: string
           wins: string
         }
@@ -49,7 +51,9 @@ export type Database = {
           goals?: string
           id?: string
           misses?: string
+          nudged_stone?: string
           reply?: string
+          stone_statuses?: Json
           user_id: string
           wins?: string
         }
@@ -59,7 +63,9 @@ export type Database = {
           goals?: string
           id?: string
           misses?: string
+          nudged_stone?: string
           reply?: string
+          stone_statuses?: Json
           user_id?: string
           wins?: string
         }
