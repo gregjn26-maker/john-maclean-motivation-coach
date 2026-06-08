@@ -51,31 +51,31 @@ function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-5 py-10">
+    <main className="min-h-screen bg-brand-bg flex items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm">
         <header className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">John Maclean</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Motivation Coach</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">John Maclean</h1>
+          <p className="mt-1 text-sm text-brand-muted">Motivation Coach</p>
         </header>
 
         {sent ? (
-          <div className="rounded-xl border border-border bg-card p-6 text-center">
-            <h2 className="text-base font-semibold text-foreground">Check your email</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              We've sent a sign-in link to <span className="font-medium text-foreground">{email}</span>.
+          <div className="rounded-xl border border-border bg-white p-6 text-center">
+            <h2 className="text-base font-semibold text-brand-navy">Check your email</h2>
+            <p className="mt-2 text-sm text-brand-muted">
+              We've sent a sign-in link to <span className="font-medium text-brand-text">{email}</span>.
               Open it on this device to log in.
             </p>
             <button
               onClick={() => setSent(false)}
-              className="mt-4 text-sm text-primary underline-offset-4 hover:underline"
+              className="mt-4 text-sm text-brand-orange underline-offset-4 hover:underline"
             >
               Use a different email
             </button>
           </div>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border bg-card p-6">
+          <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border bg-white p-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-brand-text">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -88,10 +88,10 @@ function AuthPage() {
                 className="h-12 text-base"
               />
             </div>
-            <Button type="submit" className="w-full h-12 text-base" disabled={sending}>
+            <Button type="submit" className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold" disabled={sending}>
               {sending ? "Sending link…" : "Send me a sign-in link"}
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-xs text-brand-muted text-center">
               No password. We email you a one-tap sign-in link.
             </p>
           </form>
