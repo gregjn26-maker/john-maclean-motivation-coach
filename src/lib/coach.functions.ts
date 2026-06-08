@@ -88,7 +88,7 @@ function buildUserMessage(
         const todayMatch = today.stone_statuses.find((t) => normaliseText(t.text) === normaliseText(s.text));
         const hasTarget = typeof s.target === "number" && s.target > 0;
         const unit = (s.unit ?? "").trim();
-        const cadence = s.cadence === "week" ? "per week" : s.cadence === "day" ? "per day" : "";
+        const cadence = s.cadence === "week" ? "per week" : s.cadence === "month" ? "per month" : s.cadence === "quarter" ? "per quarter" : s.cadence === "day" ? "per day" : "";
         const targetStr = hasTarget ? ` — target ${s.target}${unit ? " " + unit : ""}${cadence ? " " + cadence : ""}` : "";
 
         let status: string;

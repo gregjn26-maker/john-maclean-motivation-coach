@@ -29,12 +29,14 @@ function JMAvatar() {
   );
 }
 
+type Cadence = "day" | "week" | "month" | "quarter";
+
 type StoneForm = {
   text: string;
   measurable: boolean;
   target: string;
   unit: string;
-  cadence: "day" | "week";
+  cadence: Cadence;
 };
 
 function emptyStone(): StoneForm {
@@ -69,7 +71,11 @@ function GoalsPage() {
             s.length
               ? s.map((x) => {
                   const hasTarget = typeof x.target === "number" && x.target > 0;
-                  const cadence = (x.cadence === "week" ? "week" : "day") as "day" | "week";
+                  const cadence: Cadence =
+                    x.cadence === "week" ? "week"
+                    : x.cadence === "month" ? "month"
+                    : x.cadence === "quarter" ? "quarter"
+                    : "day";
                   return {
                     text: x.text ?? "",
                     measurable: hasTarget,
@@ -114,9 +120,9 @@ function GoalsPage() {
           target: hasTarget ? targetNum : null,
           unit: hasTarget ? s.unit.trim().slice(0, 40) : "",
           cadence: hasTarget ? s.cadence : "",
-        } as { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" };
+        } as { text: string; target: number | null; unit: string; cadence: Cadence | "" };
       })
-      .filter((x): x is { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" } => x !== null);
+      .filter((x): x is { text: string; target: number | null; unit: string; cadence: Cadence | "" } => x !== null);
     if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
     try {
@@ -328,11 +334,13 @@ function GoalsPage() {
                         />
                         <select
                           value={s.cadence}
-                          onChange={(e) => updateStone(i, { cadence: e.target.value as "day" | "week" })}
+                          onChange={(e) => updateStone(i, { cadence: e.target.value as Cadence })}
                           className="h-11 rounded-md border border-input bg-white px-2 text-sm"
                         >
                           <option value="day">per day</option>
                           <option value="week">per week</option>
+                          <option value="month">per month</option>
+                          <option value="quarter">per quarter</option>
                         </select>
                       </div>
                     )}
