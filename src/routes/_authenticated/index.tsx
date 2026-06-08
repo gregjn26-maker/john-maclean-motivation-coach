@@ -116,9 +116,18 @@ function HomePage() {
           });
           const initialTaps: Record<string, boolean | null> = {};
           const initialAmts: Record<string, string> = {};
-          stones.forEach((s) => { initialTaps[s.text] = null; initialAmts[s.text] = ""; });
+          const initialAch: Record<string, string> = {};
+          const initialTot: Record<string, string> = {};
+          stones.forEach((s) => {
+            initialTaps[s.text] = null;
+            initialAmts[s.text] = "";
+            initialAch[s.text] = "";
+            initialTot[s.text] = "";
+          });
           setStoneTaps(initialTaps);
           setStoneAmounts(initialAmts);
+          setStoneAchieved(initialAch);
+          setStoneTotals(initialTot);
         } else {
           let seen = false;
           try { seen = localStorage.getItem("jm_welcome_seen") === "1"; } catch {}
