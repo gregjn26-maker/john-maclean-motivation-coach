@@ -239,7 +239,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .select("big_goal, target_date, stones")
       .eq("user_id", userId)
       .maybeSingle();
-    if (goalErr) throw new Error(`Failed to load goal: ${goalErr.message}`);
+    if (goalErr) { console.error("[coach] goal load:", goalErr); throw new Error("Could not load your goal."); }
     const bigGoal: BigGoalContext | null = goalRow
       ? {
           big_goal: goalRow.big_goal ?? "",
