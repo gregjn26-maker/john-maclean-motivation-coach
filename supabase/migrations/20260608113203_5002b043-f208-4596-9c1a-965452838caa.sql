@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS company text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS job_title text NOT NULL DEFAULT '';

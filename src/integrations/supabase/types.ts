@@ -106,24 +106,30 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company: string
           created_at: string
           email: string
           first_name: string
           id: string
+          job_title: string
           last_name: string
         }
         Insert: {
+          company?: string
           created_at?: string
           email: string
           first_name?: string
           id: string
+          job_title?: string
           last_name?: string
         }
         Update: {
+          company?: string
           created_at?: string
           email?: string
           first_name?: string
           id?: string
+          job_title?: string
           last_name?: string
         }
         Relationships: []
