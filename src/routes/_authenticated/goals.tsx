@@ -29,12 +29,14 @@ function JMAvatar() {
   );
 }
 
+type Cadence = "day" | "week" | "month" | "quarter";
+
 type StoneForm = {
   text: string;
   measurable: boolean;
   target: string;
   unit: string;
-  cadence: "day" | "week";
+  cadence: Cadence;
 };
 
 function emptyStone(): StoneForm {
