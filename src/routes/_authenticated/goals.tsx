@@ -166,7 +166,6 @@ function GoalsPage() {
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : (
           <form onSubmit={onSubmit} className="space-y-6 text-left">
-            <JohnVideos heading="Watch John" />
 
             {/* Coaching intro */}
             <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}>
