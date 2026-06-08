@@ -190,7 +190,8 @@ async function callAnthropic(opts: {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Anthropic ${opts.model} ${res.status}: ${text.slice(0, 400)}`);
+    console.error(`[coach] Anthropic ${opts.model} ${res.status}:`, text.slice(0, 400));
+    throw new Error("Could not generate a reply. Please try again.");
   }
   const json = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
   const text = json.content?.filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n").trim();
