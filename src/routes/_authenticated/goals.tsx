@@ -76,7 +76,15 @@ function GoalsPage() {
           setBigGoal(res.goal.big_goal ?? "");
           setTargetDate(res.goal.target_date ?? "");
           const s = Array.isArray(res.goal.stones)
-            ? (res.goal.stones as Array<{ text: string; target?: number | null; unit?: string; cadence?: string }>)
+            ? (res.goal.stones as Array<{
+                text: string;
+                target?: number | null;
+                unit?: string;
+                cadence?: string;
+                metric?: string;
+                numerator_label?: string;
+                denominator_label?: string;
+              }>)
             : [];
           setStones(
             s.length
@@ -87,13 +95,19 @@ function GoalsPage() {
                     : x.cadence === "month" ? "month"
                     : x.cadence === "quarter" ? "quarter"
                     : "day";
+                  const metric: Metric =
+                    x.metric === "count" || x.metric === "rate" || x.metric === "habit"
+                      ? x.metric
+                      : (hasTarget ? "count" : "habit");
                   return {
                     text: x.text ?? "",
-                    measurable: hasTarget,
+                    metric,
                     target: hasTarget ? String(x.target) : "",
                     unit: x.unit ?? "",
                     cadence,
-                  };
+                    numerator_label: x.numerator_label ?? "",
+                    denominator_label: x.denominator_label ?? "",
+                  } satisfies StoneForm;
                 })
               : [emptyStone()],
           );
