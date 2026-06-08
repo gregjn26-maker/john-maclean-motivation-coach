@@ -36,7 +36,7 @@ interface PastCheckIn {
 interface BigGoalContext {
   big_goal: string;
   target_date: string | null;
-  stones: Array<{ text: string }>;
+  stones: StoneMeta[];
 }
 
 function normaliseText(s: string) {
