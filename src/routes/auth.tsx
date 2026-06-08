@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyGoal } from "@/lib/goals.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,19 +22,35 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const fetchGoal = useServerFn(getMyGoal);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
+  async function routeAfterAuth() {
+    try {
+      const res = await fetchGoal({});
+      if (res.goal && (res.goal.big_goal ?? "").trim().length > 0) {
+        navigate({ to: "/", replace: true });
+      } else {
+        let seen = false;
+        try { seen = localStorage.getItem("jm_welcome_seen") === "1"; } catch {}
+        navigate({ to: seen ? "/goals" : "/welcome", replace: true });
+      }
+    } catch {
+      navigate({ to: "/welcome", replace: true });
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/", replace: true });
+      if (data.user) routeAfterAuth();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) navigate({ to: "/", replace: true });
+      if (event === "SIGNED_IN" && session) routeAfterAuth();
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
