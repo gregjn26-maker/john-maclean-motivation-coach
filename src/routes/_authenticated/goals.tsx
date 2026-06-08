@@ -104,7 +104,20 @@ function GoalsPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const cleanedStones = stones.map((s) => s.trim()).filter(Boolean);
+    const cleanedStones = stones
+      .map((s) => {
+        const text = s.text.trim();
+        if (!text) return null;
+        const targetNum = s.measurable ? Number(s.target) : NaN;
+        const hasTarget = s.measurable && Number.isFinite(targetNum) && targetNum > 0;
+        return {
+          text,
+          target: hasTarget ? targetNum : null,
+          unit: hasTarget ? s.unit.trim().slice(0, 40) : "",
+          cadence: hasTarget ? s.cadence : "",
+        } as { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" };
+      })
+      .filter((x): x is { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" } => x !== null);
     if (!firstName.trim()) return toast.error("Add your first name.");
     if (!bigGoal.trim()) return toast.error("Add your big goal.");
     if (cleanedStones.length < 1) return toast.error("Add at least 1 stone.");
@@ -115,7 +128,7 @@ function GoalsPage() {
         data: {
           big_goal: bigGoal.trim(),
           target_date: targetDate || null,
-          stones: cleanedStones.map((text) => ({ text })),
+          stones: cleanedStones,
         },
       });
       toast.success("Saved.");
