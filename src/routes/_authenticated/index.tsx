@@ -75,6 +75,7 @@ function HomePage() {
   const [bigGoal, setBigGoal] = useState<BigGoal | null>(null);
   const [goalLoaded, setGoalLoaded] = useState(false);
   const [stoneTaps, setStoneTaps] = useState<Record<string, boolean | null>>({});
+  const [stoneAmounts, setStoneAmounts] = useState<Record<string, string>>({});
 
   const submit = useServerFn(submitCheckIn);
   const fetchGoal = useServerFn(getMyGoal);
