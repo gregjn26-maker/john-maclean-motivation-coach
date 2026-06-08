@@ -105,20 +105,26 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          first_name: string
           id: string
           is_admin: boolean
+          last_name: string
         }
         Insert: {
           created_at?: string
           email: string
+          first_name?: string
           id: string
           is_admin?: boolean
+          last_name?: string
         }
         Update: {
           created_at?: string
           email?: string
+          first_name?: string
           id?: string
           is_admin?: boolean
+          last_name?: string
         }
         Relationships: []
       }
