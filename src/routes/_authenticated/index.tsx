@@ -48,6 +48,7 @@ function HomePage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [bigGoal, setBigGoal] = useState<BigGoal | null>(null);
   const [goalLoaded, setGoalLoaded] = useState(false);
+  const [stoneTaps, setStoneTaps] = useState<Record<string, boolean | null>>({});
 
   const submit = useServerFn(submitCheckIn);
   const fetchGoal = useServerFn(getMyGoal);
@@ -59,13 +60,16 @@ function HomePage() {
       .then((res) => {
         const g = res.goal;
         if (g) {
+          const stones = Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [];
           setBigGoal({
             big_goal: g.big_goal ?? "",
             target_date: g.target_date ?? null,
-            stones: Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [],
+            stones,
           });
+          const initial: Record<string, boolean | null> = {};
+          stones.forEach((s) => { initial[s.text] = null; });
+          setStoneTaps(initial);
         } else {
-          // First-time user — send them to set their goal
           navigate({ to: "/goals" });
         }
       })
@@ -88,6 +92,10 @@ function HomePage() {
     setHistory((data ?? []) as PastCheckIn[]);
   }
 
+  function setTap(text: string, worked: boolean) {
+    setStoneTaps((prev) => ({ ...prev, [text]: prev[text] === worked ? null : worked }));
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!goals.trim() && !wins.trim() && !misses.trim()) {
@@ -97,11 +105,17 @@ function HomePage() {
     setSubmitting(true);
     setReply(null);
     try {
-      const result = await submit({ data: { goals, wins, misses } });
+      const stone_statuses = (bigGoal?.stones ?? [])
+        .filter((s) => stoneTaps[s.text] === true || stoneTaps[s.text] === false)
+        .map((s) => ({ text: s.text, worked: !!stoneTaps[s.text] }));
+      const result = await submit({ data: { goals, wins, misses, stone_statuses } });
       setReply(result.reply);
       setGoals("");
       setWins("");
       setMisses("");
+      const cleared: Record<string, boolean | null> = {};
+      (bigGoal?.stones ?? []).forEach((s) => { cleared[s.text] = null; });
+      setStoneTaps(cleared);
       loadHistory();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
@@ -110,6 +124,7 @@ function HomePage() {
       setSubmitting(false);
     }
   }
+
 
   async function signOut() {
     await supabase.auth.signOut();
