@@ -9,7 +9,7 @@ const StoneSchema = z.object({
 const GoalInput = z.object({
   big_goal: z.string().trim().max(500),
   target_date: z.string().trim().max(20).nullable().optional(),
-  stones: z.array(StoneSchema).max(8),
+  stones: z.array(StoneSchema).min(1).max(5),
 });
 
 export const getMyGoal = createServerFn({ method: "GET" })

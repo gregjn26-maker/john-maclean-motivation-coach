@@ -42,6 +42,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-coach-panel: var(--coach-panel);
+  --color-coach-panel-foreground: var(--coach-panel-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -95,6 +97,8 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  --coach-panel: oklch(0.97 0.02 85);
+  --coach-panel-foreground: oklch(0.3 0.05 260);
 }
 
 .dark {
@@ -130,6 +134,8 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --coach-panel: oklch(0.25 0.03 80);
+  --coach-panel-foreground: oklch(0.95 0.01 85);
 }
 
 @layer base {
