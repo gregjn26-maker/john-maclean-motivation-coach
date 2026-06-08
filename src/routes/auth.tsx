@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import logo from "@/assets/john-maclean-logo-white.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -53,10 +54,14 @@ function AuthPage() {
   return (
     <main className="min-h-screen bg-brand-bg flex items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm">
+        <div className="mb-6 rounded-2xl bg-brand-navy px-6 py-8 flex items-center justify-center shadow-sm">
+          <img src={logo.url} alt="John Maclean" className="h-20 w-auto object-contain" />
+        </div>
         <header className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">John Maclean</h1>
           <p className="mt-1 text-sm text-brand-muted">Motivation Coach</p>
         </header>
+
 
         {sent ? (
           <div className="rounded-xl border border-border bg-white p-6 text-center">
