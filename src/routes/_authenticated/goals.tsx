@@ -171,7 +171,7 @@ function GoalsPage() {
             <JohnVideos heading="Watch John" />
 
             {/* Coaching intro */}
-            <section className="rounded-xl bg-coach-panel p-5 space-y-3">
+            <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}>
               <div className="flex items-start gap-3">
                 <JMAvatar />
                 <div className="space-y-2 text-sm text-coach-panel-foreground leading-relaxed">
@@ -185,10 +185,10 @@ function GoalsPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Your name</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">What should John call you?</p>
+            <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
+                <h2 className="text-base font-semibold text-brand-navy">Your name</h2>
+                <p className="text-xs text-brand-muted mt-0.5">What should John call you?</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -214,7 +214,11 @@ function GoalsPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+            <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="border-l-4 pl-3" style={{ borderColor: "#FF6B35" }}>
+                <h2 className="text-base font-semibold text-brand-navy">Your big goal</h2>
+                <p className="text-xs text-brand-muted mt-0.5">The pole up the street — what are you aiming at?</p>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">Your big goal / dream</Label>
                 <Textarea
@@ -236,11 +240,11 @@ function GoalsPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Your stones — the small steps that get you there</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  1–5 smaller, measurable steps. e.g. "20 calls a day", "5 meetings a week"
+            <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
+                <h2 className="text-base font-semibold text-brand-navy">Your stones</h2>
+                <p className="text-xs text-brand-muted mt-0.5">
+                  1–5 small, measurable steps that get you there. e.g. "20 calls a day", "5 meetings a week".
                 </p>
               </div>
               <div className="space-y-4">
@@ -330,7 +334,12 @@ function GoalsPage() {
               )}
             </section>
 
-            <Button type="submit" disabled={saving} className="w-full h-12 text-base">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="w-full h-12 text-base font-semibold text-white hover:opacity-90"
+              style={{ backgroundColor: "#FF6B35" }}
+            >
               {saving ? "Saving…" : "Save goal"}
             </Button>
           </form>
