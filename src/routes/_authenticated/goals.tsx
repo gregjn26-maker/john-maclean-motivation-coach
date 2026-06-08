@@ -29,6 +29,18 @@ function JMAvatar() {
   );
 }
 
+type StoneForm = {
+  text: string;
+  measurable: boolean;
+  target: string;
+  unit: string;
+  cadence: "day" | "week";
+};
+
+function emptyStone(): StoneForm {
+  return { text: "", measurable: false, target: "", unit: "", cadence: "day" };
+}
+
 function GoalsPage() {
   const navigate = useNavigate();
   const fetchGoal = useServerFn(getMyGoal);
@@ -40,7 +52,7 @@ function GoalsPage() {
   const [lastName, setLastName] = useState("");
   const [bigGoal, setBigGoal] = useState("");
   const [targetDate, setTargetDate] = useState("");
-  const [stones, setStones] = useState<string[]>([""]);
+  const [stones, setStones] = useState<StoneForm[]>([emptyStone()]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -50,8 +62,24 @@ function GoalsPage() {
         if (res.goal) {
           setBigGoal(res.goal.big_goal ?? "");
           setTargetDate(res.goal.target_date ?? "");
-          const s = Array.isArray(res.goal.stones) ? (res.goal.stones as Array<{ text: string }>) : [];
-          setStones(s.length ? s.map((x) => x.text) : [""]);
+          const s = Array.isArray(res.goal.stones)
+            ? (res.goal.stones as Array<{ text: string; target?: number | null; unit?: string; cadence?: string }>)
+            : [];
+          setStones(
+            s.length
+              ? s.map((x) => {
+                  const hasTarget = typeof x.target === "number" && x.target > 0;
+                  const cadence = (x.cadence === "week" ? "week" : "day") as "day" | "week";
+                  return {
+                    text: x.text ?? "",
+                    measurable: hasTarget,
+                    target: hasTarget ? String(x.target) : "",
+                    unit: x.unit ?? "",
+                    cadence,
+                  };
+                })
+              : [emptyStone()],
+          );
         }
       }),
       fetchProfile({}).then((res) => {
@@ -63,12 +91,12 @@ function GoalsPage() {
       .finally(() => setLoading(false));
   }, [fetchGoal, fetchProfile]);
 
-  function updateStone(i: number, val: string) {
-    setStones((prev) => prev.map((s, idx) => (idx === i ? val : s)));
+  function updateStone(i: number, patch: Partial<StoneForm>) {
+    setStones((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
   function addStone() {
     if (stones.length >= 5) return;
-    setStones((prev) => [...prev, ""]);
+    setStones((prev) => [...prev, emptyStone()]);
   }
   function removeStone(i: number) {
     setStones((prev) => (prev.length <= 1 ? prev : prev.filter((_, idx) => idx !== i)));
