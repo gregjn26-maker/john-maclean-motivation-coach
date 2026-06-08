@@ -362,7 +362,9 @@ function HomePage() {
             </Button>
           </form>
         </section>
+          </div>
 
+          <div className="space-y-5 lg:min-w-0">
         {/* Chat-style reply */}
         {reply && submittedSummary && (
           <section className="space-y-3">
