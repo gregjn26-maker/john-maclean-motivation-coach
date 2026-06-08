@@ -266,7 +266,16 @@ function HomePage() {
                 {bigGoal.stones.map((s, i) => {
                   const measurable = typeof s.target === "number" && s.target > 0;
                   const tap = stoneTaps[s.text];
-                  const cadenceLbl = s.cadence === "week" ? "this week" : "today";
+                  const cadenceLbl =
+                    s.cadence === "week" ? "this week"
+                    : s.cadence === "month" ? "this month"
+                    : s.cadence === "quarter" ? "this quarter"
+                    : "today";
+                  const cadenceShort =
+                    s.cadence === "week" ? "/wk"
+                    : s.cadence === "month" ? "/mo"
+                    : s.cadence === "quarter" ? "/qtr"
+                    : "/day";
                   const unit = (s.unit ?? "").trim();
                   return (
                     <div key={i} className="rounded-lg bg-brand-bg p-2.5">
@@ -274,7 +283,7 @@ function HomePage() {
                         <p className="text-sm text-brand-text break-words font-medium">{s.text}</p>
                         {measurable && (
                           <span className="text-[11px] text-brand-muted flex-shrink-0">
-                            target {s.target}{unit ? ` ${unit}` : ""} {s.cadence === "week" ? "/wk" : "/day"}
+                            target {s.target}{unit ? ` ${unit}` : ""} {cadenceShort}
                           </span>
                         )}
                       </div>
