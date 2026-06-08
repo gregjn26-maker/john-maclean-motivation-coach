@@ -23,9 +23,10 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const fetchGoal = useServerFn(getMyGoal);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function routeAfterAuth() {
     try {
@@ -54,19 +55,38 @@ function AuthPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed) return;
-    setSending(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: trimmed,
-      options: { emailRedirectTo: `${window.location.origin}/auth` },
-    });
-    setSending(false);
-    if (error) {
-      toast.error(error.message);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) return;
+    if (mode === "signup" && password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
       return;
     }
-    setSent(true);
+    setSubmitting(true);
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
+      setSubmitting(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+    } else {
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
+      });
+      setSubmitting(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      if (!data.session) {
+        toast.success("Check your email to confirm your account.");
+      }
+    }
   }
 
   return (
@@ -79,45 +99,49 @@ function AuthPage() {
           <h1 className="text-2xl font-bold tracking-tight text-brand-navy uppercase">How far can you go?</h1>
         </header>
 
-
-        {sent ? (
-          <div className="rounded-xl border border-border bg-white p-6 text-center">
-            <h2 className="text-base font-semibold text-brand-navy">Check your email</h2>
-            <p className="mt-2 text-sm text-brand-muted">
-              We've sent a sign-in link to <span className="font-medium text-brand-text">{email}</span>.
-              Open it on this device to log in.
-            </p>
-            <button
-              onClick={() => setSent(false)}
-              className="mt-4 text-sm text-brand-orange underline-offset-4 hover:underline"
-            >
-              Use a different email
-            </button>
+        <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border bg-white p-6">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-brand-text">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-12 text-base"
+            />
           </div>
-        ) : (
-          <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border bg-white p-6">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-brand-text">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12 text-base"
-              />
-            </div>
-            <Button type="submit" className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold" disabled={sending}>
-              {sending ? "Sending link…" : "Send me a sign-in link"}
-            </Button>
-            <p className="text-xs text-brand-muted text-center">
-              No password. We email you a one-tap sign-in link.
-            </p>
-          </form>
-        )}
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-brand-text">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              required
+              minLength={6}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12 text-base"
+            />
+          </div>
+          <Button type="submit" className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold" disabled={submitting}>
+            {submitting ? (mode === "signin" ? "Signing in…" : "Creating account…") : (mode === "signin" ? "Sign in" : "Create account")}
+          </Button>
+          <p className="text-xs text-brand-muted text-center">
+            {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
+            <button
+              type="button"
+              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              className="text-brand-orange underline-offset-4 hover:underline font-medium"
+            >
+              {mode === "signin" ? "Create an account" : "Sign in"}
+            </button>
+          </p>
+        </form>
       </div>
     </main>
   );
