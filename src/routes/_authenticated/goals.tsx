@@ -96,7 +96,6 @@ function GoalsPage() {
     setStones((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
   function addStone() {
-    if (stones.length >= 5) return;
     setStones((prev) => [...prev, emptyStone()]);
   }
   function removeStone(i: number) {
