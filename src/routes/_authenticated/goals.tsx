@@ -334,11 +334,13 @@ function GoalsPage() {
                         />
                         <select
                           value={s.cadence}
-                          onChange={(e) => updateStone(i, { cadence: e.target.value as "day" | "week" })}
+                          onChange={(e) => updateStone(i, { cadence: e.target.value as Cadence })}
                           className="h-11 rounded-md border border-input bg-white px-2 text-sm"
                         >
                           <option value="day">per day</option>
                           <option value="week">per week</option>
+                          <option value="month">per month</option>
+                          <option value="quarter">per quarter</option>
                         </select>
                       </div>
                     )}
