@@ -110,7 +110,11 @@ function ProgressPage() {
       ]);
       setLoading(false);
       if (error) return;
-      setRows((data ?? []) as CheckInRow[]);
+      const typedRows = (data ?? []).map((r) => ({
+        ...r,
+        stone_statuses: Array.isArray(r.stone_statuses) ? (r.stone_statuses as unknown as StoneStatus[]) : [],
+      }));
+      setRows(typedRows as CheckInRow[]);
       setTotal(count ?? data?.length ?? 0);
       if (goalData) {
         setGoal({
