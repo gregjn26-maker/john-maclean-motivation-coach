@@ -19,7 +19,29 @@ interface PastCheckIn {
   reply: string;
 }
 
-function buildUserMessage(today: { goals: string; wins: string; misses: string }, past: PastCheckIn[]) {
+interface BigGoalContext {
+  big_goal: string;
+  target_date: string | null;
+  stones: Array<{ text: string }>;
+}
+
+function buildUserMessage(
+  today: { goals: string; wins: string; misses: string },
+  past: PastCheckIn[],
+  bigGoal: BigGoalContext | null,
+) {
+  let goalBlock = "";
+  if (bigGoal && (bigGoal.big_goal || (bigGoal.stones && bigGoal.stones.length > 0))) {
+    goalBlock = "THIS USER'S BIG GOAL (always hold them to this — push them one stone further than yesterday):\n";
+    if (bigGoal.big_goal) goalBlock += `Big goal: ${bigGoal.big_goal}\n`;
+    if (bigGoal.target_date) goalBlock += `Target date: ${bigGoal.target_date}\n`;
+    if (bigGoal.stones?.length) {
+      goalBlock += `Stones (measurable steps):\n`;
+      bigGoal.stones.forEach((s, i) => { goalBlock += `  ${i + 1}. ${s.text}\n`; });
+    }
+    goalBlock += "\n---\n\n";
+  }
+
   let memory = "";
   if (past.length > 0) {
     memory = "Here are this user's most recent check-ins (most recent first), so you can refer back naturally:\n\n";
@@ -33,12 +55,13 @@ function buildUserMessage(today: { goals: string; wins: string; misses: string }
     memory += "---\n\n";
   }
   return (
+    goalBlock +
     memory +
     `TODAY'S CHECK-IN (about yesterday):\n\n` +
     `Yesterday's goals:\n${today.goals || "(left blank)"}\n\n` +
     `Wins:\n${today.wins || "(left blank)"}\n\n` +
     `Misses:\n${today.misses || "(left blank)"}\n\n` +
-    `Now respond as John, following the pattern in your system prompt.`
+    `Now respond as John, following the pattern in your system prompt. Reference their big goal and the next stone where it fits naturally — hold them accountable to one stone further than yesterday. Use Australian English.`
   );
 }
 
