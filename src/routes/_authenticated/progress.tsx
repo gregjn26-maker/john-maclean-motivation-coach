@@ -127,7 +127,7 @@ function ProgressPage() {
       if (goalData) {
         setGoal({
           big_goal: goalData.big_goal ?? "",
-          stones: Array.isArray(goalData.stones) ? (goalData.stones as Array<{ text: string }>) : [],
+          stones: Array.isArray(goalData.stones) ? (goalData.stones as unknown as StoneMeta[]) : [],
         });
       }
     })();
