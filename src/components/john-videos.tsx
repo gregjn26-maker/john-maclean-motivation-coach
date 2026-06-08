@@ -40,7 +40,7 @@ export function JohnVideos({ heading = "Watch John" }: { heading?: string }) {
         <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: "#F4B400" }} />
         <h2 className="text-base font-semibold text-brand-navy">{heading}</h2>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="mx-auto w-full max-w-[720px] space-y-6">
         {JOHN_VIDEOS.map((v) => (
           <figure key={v.id} className="space-y-2">
             <VimeoEmbed title={v.title} embedUrl={v.embedUrl} />
