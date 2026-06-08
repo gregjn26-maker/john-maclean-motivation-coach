@@ -122,7 +122,22 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .limit(5);
     if (pastErr) throw new Error(`Failed to load history: ${pastErr.message}`);
 
-    const userMessage = buildUserMessage(data, (pastRows ?? []) as PastCheckIn[]);
+    // Big goal context
+    const { data: goalRow, error: goalErr } = await supabase
+      .from("goals")
+      .select("big_goal, target_date, stones")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (goalErr) throw new Error(`Failed to load goal: ${goalErr.message}`);
+    const bigGoal = goalRow
+      ? {
+          big_goal: goalRow.big_goal ?? "",
+          target_date: goalRow.target_date ?? null,
+          stones: Array.isArray(goalRow.stones) ? (goalRow.stones as Array<{ text: string }>) : [],
+        }
+      : null;
+
+    const userMessage = buildUserMessage(data, (pastRows ?? []) as PastCheckIn[], bigGoal);
 
     let reply: string;
     try {
