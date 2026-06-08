@@ -222,7 +222,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10);
-    if (pastErr) throw new Error(`Failed to load history: ${pastErr.message}`);
+    if (pastErr) { console.error("[coach] history load:", pastErr); throw new Error("Could not load check-in history."); }
 
     const past: PastCheckIn[] = (pastRows ?? []).map((r) => ({
       check_in_date: r.check_in_date,
