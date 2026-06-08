@@ -29,6 +29,6 @@ export const saveMyName = createServerFn({ method: "POST" })
       .from("profiles")
       .update({ first_name: data.first_name, last_name: data.last_name ?? "" })
       .eq("id", userId);
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[profile] save error:", error); throw new Error("Could not save your name."); }
     return { ok: true };
   });
