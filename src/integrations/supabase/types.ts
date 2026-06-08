@@ -65,6 +65,36 @@ export type Database = {
         }
         Relationships: []
       }
+      goals: {
+        Row: {
+          big_goal: string
+          created_at: string
+          id: string
+          stones: Json
+          target_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          big_goal?: string
+          created_at?: string
+          id?: string
+          stones?: Json
+          target_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          big_goal?: string
+          created_at?: string
+          id?: string
+          stones?: Json
+          target_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
