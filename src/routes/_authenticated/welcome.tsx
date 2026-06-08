@@ -16,13 +16,6 @@ export const Route = createFileRoute("/_authenticated/welcome")({
   component: WelcomePage,
 });
 
-function JMAvatar() {
-  return (
-    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-brand-navy inline-flex items-center justify-center text-white font-bold text-sm">
-      JM
-    </div>
-  );
-}
 
 function WelcomePage() {
   const navigate = useNavigate();
