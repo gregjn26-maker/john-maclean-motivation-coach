@@ -10,7 +10,7 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in — John Maclean Daily Coach" },
+      { title: "Sign in — John Maclean Motivation Coach" },
       { name: "description", content: "Sign in with your email to start your daily check-in." },
     ],
   }),
