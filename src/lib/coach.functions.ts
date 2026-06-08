@@ -243,7 +243,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       ? {
           big_goal: goalRow.big_goal ?? "",
           target_date: goalRow.target_date ?? null,
-          stones: Array.isArray(goalRow.stones) ? (goalRow.stones as Array<{ text: string }>) : [],
+          stones: Array.isArray(goalRow.stones) ? (goalRow.stones as unknown as StoneMeta[]) : [],
         }
       : null;
 
