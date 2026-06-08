@@ -19,7 +19,9 @@ const CheckInInput = z.object({
 const PRIMARY_MODEL = "claude-opus-4-7";
 const FALLBACK_MODEL = "claude-sonnet-4-6";
 
-interface StoneStatus { text: string; worked: boolean }
+interface StoneStatus { text: string; worked: boolean; amount?: number | null }
+
+interface StoneMeta { text: string; target?: number | null; unit?: string; cadence?: string }
 
 interface PastCheckIn {
   check_in_date: string;
