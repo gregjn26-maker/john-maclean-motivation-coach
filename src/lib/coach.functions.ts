@@ -190,7 +190,8 @@ async function callAnthropic(opts: {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Anthropic ${opts.model} ${res.status}: ${text.slice(0, 400)}`);
+    console.error(`[coach] Anthropic ${opts.model} ${res.status}:`, text.slice(0, 400));
+    throw new Error("Could not generate a reply. Please try again.");
   }
   const json = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
   const text = json.content?.filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n").trim();
@@ -212,7 +213,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .select("value")
       .eq("key", "coach_system_prompt")
       .maybeSingle();
-    if (settingErr) throw new Error(`Failed to load coach prompt: ${settingErr.message}`);
+    if (settingErr) { console.error("[coach] prompt load:", settingErr); throw new Error("Could not load coach settings."); }
     const systemPrompt = settingRow?.value ?? "You are John Maclean, a motivational coach.";
 
     const { data: pastRows, error: pastErr } = await supabase
@@ -221,7 +222,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10);
-    if (pastErr) throw new Error(`Failed to load history: ${pastErr.message}`);
+    if (pastErr) { console.error("[coach] history load:", pastErr); throw new Error("Could not load check-in history."); }
 
     const past: PastCheckIn[] = (pastRows ?? []).map((r) => ({
       check_in_date: r.check_in_date,
@@ -238,7 +239,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .select("big_goal, target_date, stones")
       .eq("user_id", userId)
       .maybeSingle();
-    if (goalErr) throw new Error(`Failed to load goal: ${goalErr.message}`);
+    if (goalErr) { console.error("[coach] goal load:", goalErr); throw new Error("Could not load your goal."); }
     const bigGoal: BigGoalContext | null = goalRow
       ? {
           big_goal: goalRow.big_goal ?? "",
@@ -305,7 +306,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       })
       .select("id, created_at, check_in_date, goals, wins, misses, reply, overall_rating")
       .single();
-    if (insertErr) throw new Error(`Failed to save check-in: ${insertErr.message}`);
+    if (insertErr) { console.error("[coach] save check-in:", insertErr); throw new Error("Could not save your check-in."); }
 
     return { checkIn: inserted, reply };
   });

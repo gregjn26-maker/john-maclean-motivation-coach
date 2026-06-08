@@ -24,7 +24,7 @@ export const getMyGoal = createServerFn({ method: "GET" })
       .select("id, big_goal, target_date, stones, updated_at")
       .eq("user_id", userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[goals] load error:", error); throw new Error("Could not load your goal."); }
     return { goal: data };
   });
 
@@ -44,6 +44,6 @@ export const saveMyGoal = createServerFn({ method: "POST" })
       .upsert(payload, { onConflict: "user_id" })
       .select("id, big_goal, target_date, stones, updated_at")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[goals] save error:", error); throw new Error("Could not save your goal."); }
     return { goal: saved };
   });
