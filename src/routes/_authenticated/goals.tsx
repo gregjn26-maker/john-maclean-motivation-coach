@@ -120,9 +120,9 @@ function GoalsPage() {
           target: hasTarget ? targetNum : null,
           unit: hasTarget ? s.unit.trim().slice(0, 40) : "",
           cadence: hasTarget ? s.cadence : "",
-        } as { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" };
+        } as { text: string; target: number | null; unit: string; cadence: Cadence | "" };
       })
-      .filter((x): x is { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" } => x !== null);
+      .filter((x): x is { text: string; target: number | null; unit: string; cadence: Cadence | "" } => x !== null);
     if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
     try {
