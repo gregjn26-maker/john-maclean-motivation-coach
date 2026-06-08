@@ -182,6 +182,23 @@ function GoalsPage() {
               </div>
             </section>
 
+            {/* <<-- REPLACE WITH JOHN'S PERSONAL VIMEO LINK WHEN READY -->> */}
+            <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#0A2540" }}>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-white/10 inline-flex items-center justify-center text-white">
+                  <Play className="h-5 w-5 fill-white" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-white leading-relaxed">
+                    A personal message from John — coming soon.
+                  </p>
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    John will talk you through turning your big goal into stones you can actually move.
+                  </p>
+                </div>
+              </div>
+            </section>
+
             <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
               <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
                 <h2 className="text-base font-semibold text-brand-navy">Your name</h2>
