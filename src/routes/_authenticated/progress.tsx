@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/progress")({
 interface StoneStatus {
   text: string;
   worked: boolean;
+  amount?: number | null;
 }
 
 interface CheckInRow {
@@ -26,9 +27,16 @@ interface CheckInRow {
   stone_statuses: StoneStatus[];
 }
 
+interface StoneMeta {
+  text: string;
+  target?: number | null;
+  unit?: string;
+  cadence?: string;
+}
+
 interface GoalData {
   big_goal: string;
-  stones: Array<{ text: string }>;
+  stones: StoneMeta[];
 }
 
 function normaliseText(s: string) {
