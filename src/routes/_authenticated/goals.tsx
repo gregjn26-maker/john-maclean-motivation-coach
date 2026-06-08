@@ -133,6 +133,35 @@ function GoalsPage() {
             </section>
 
             <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Your name</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">What should John call you?</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">First name</Label>
+                  <Input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="e.g. Greg"
+                    className="text-base h-11"
+                    maxLength={60}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Last name <span className="text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder=""
+                    className="text-base h-11"
+                    maxLength={60}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-border bg-card p-5 space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-sm">Your big goal / dream</Label>
                 <Textarea
