@@ -213,7 +213,7 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .select("value")
       .eq("key", "coach_system_prompt")
       .maybeSingle();
-    if (settingErr) throw new Error(`Failed to load coach prompt: ${settingErr.message}`);
+    if (settingErr) { console.error("[coach] prompt load:", settingErr); throw new Error("Could not load coach settings."); }
     const systemPrompt = settingRow?.value ?? "You are John Maclean, a motivational coach.";
 
     const { data: pastRows, error: pastErr } = await supabase
