@@ -229,16 +229,19 @@ function HomePage() {
         }
       />
 
-      <div className="mx-auto max-w-xl px-5 pt-5 space-y-5">
+      <div className="mx-auto max-w-xl lg:max-w-6xl px-5 pt-5 space-y-5">
         {/* Greeting + count */}
         <section>
-          <h1 className="text-2xl font-semibold text-brand-navy leading-tight">
+          <h1 className="text-2xl lg:text-3xl font-semibold text-brand-navy leading-tight">
             {timeGreeting(firstName)}
           </h1>
           <p className="mt-1 text-sm text-brand-muted">
             {loadingHistory ? "…" : `${checkInCount} check-in${checkInCount === 1 ? "" : "s"}`}
           </p>
         </section>
+
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-5 lg:space-y-0">
+          <div className="space-y-5 lg:min-w-0">
 
         {/* Goal recap card */}
         {goalLoaded && bigGoal && (
