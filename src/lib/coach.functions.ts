@@ -269,8 +269,9 @@ export const submitCheckIn = createServerFn({ method: "POST" })
         reply,
         stone_statuses: data.stone_statuses,
         nudged_stone: nudgeCandidate ?? "",
+        overall_rating: data.overall_rating,
       })
-      .select("id, created_at, check_in_date, goals, wins, misses, reply")
+      .select("id, created_at, check_in_date, goals, wins, misses, reply, overall_rating")
       .single();
     if (insertErr) throw new Error(`Failed to save check-in: ${insertErr.message}`);
 
