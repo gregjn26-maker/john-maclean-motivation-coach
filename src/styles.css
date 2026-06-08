@@ -44,6 +44,16 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-coach-panel: var(--coach-panel);
   --color-coach-panel-foreground: var(--coach-panel-foreground);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-orange: var(--brand-orange);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-green: var(--brand-green);
+  --color-brand-red: var(--brand-red);
+  --color-brand-cream: var(--brand-cream);
+  --color-brand-blue: var(--brand-blue);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
