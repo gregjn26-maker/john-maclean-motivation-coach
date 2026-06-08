@@ -10,7 +10,7 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in — John Maclean Daily Coach" },
+      { title: "Sign in — John Maclean Motivation Coach" },
       { name: "description", content: "Sign in with your email to start your daily check-in." },
     ],
   }),
@@ -55,7 +55,7 @@ function AuthPage() {
       <div className="w-full max-w-sm">
         <header className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">John Maclean</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Daily Coach</p>
+          <p className="mt-1 text-sm text-muted-foreground">Motivation Coach</p>
         </header>
 
         {sent ? (
