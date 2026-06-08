@@ -12,6 +12,7 @@ const CheckInInput = z.object({
   wins: z.string().trim().max(4000),
   misses: z.string().trim().max(4000),
   stone_statuses: z.array(StoneStatusSchema).max(8).default([]),
+  overall_rating: z.enum(["", "hit", "partly", "missed"]).default(""),
 });
 
 const PRIMARY_MODEL = "claude-opus-4-7";
