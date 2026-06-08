@@ -177,15 +177,13 @@ function buildUserMessage(
           const period = currentPeriodRange(s.cadence);
           let ach = 0;
           let tot = 0;
-          const todayPlusPast = [
-            { ...today, check_in_date: "today", reply: "", nudged_stone: "", created_at: new Date().toISOString() } as PastCheckIn & { created_at: string },
-            ...past.map((p) => ({ ...p, created_at: (p as PastCheckIn & { created_at?: string }).created_at ?? p.check_in_date })),
+          const entries: Array<{ date: Date; statuses: StoneStatus[] }> = [
+            { date: new Date(), statuses: today.stone_statuses },
+            ...past.map((p) => ({ date: new Date(p.check_in_date), statuses: p.stone_statuses })),
           ];
-          for (const p of todayPlusPast) {
-            const ts = new Date(p.created_at);
-            if (period && (ts < period.start || ts >= period.end)) continue;
-            const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
-            const m = arr.find((x) => normaliseText(x.text) === normaliseText(s.text));
+          for (const p of entries) {
+            if (period && (p.date < period.start || p.date >= period.end)) continue;
+            const m = p.statuses.find((x) => normaliseText(x.text) === normaliseText(s.text));
             if (!m) continue;
             if (typeof m.achieved === "number") ach += m.achieved;
             if (typeof m.total === "number") tot += m.total;
