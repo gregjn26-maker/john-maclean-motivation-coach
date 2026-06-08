@@ -12,6 +12,7 @@ const CheckInInput = z.object({
   wins: z.string().trim().max(4000),
   misses: z.string().trim().max(4000),
   stone_statuses: z.array(StoneStatusSchema).max(8).default([]),
+  overall_rating: z.enum(["", "hit", "partly", "missed"]).default(""),
 });
 
 const PRIMARY_MODEL = "claude-opus-4-7";
@@ -268,8 +269,9 @@ export const submitCheckIn = createServerFn({ method: "POST" })
         reply,
         stone_statuses: data.stone_statuses,
         nudged_stone: nudgeCandidate ?? "",
+        overall_rating: data.overall_rating,
       })
-      .select("id, created_at, check_in_date, goals, wins, misses, reply")
+      .select("id, created_at, check_in_date, goals, wins, misses, reply, overall_rating")
       .single();
     if (insertErr) throw new Error(`Failed to save check-in: ${insertErr.message}`);
 

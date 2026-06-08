@@ -40,6 +40,7 @@ export type Database = {
           id: string
           misses: string
           nudged_stone: string
+          overall_rating: string
           reply: string
           stone_statuses: Json
           user_id: string
@@ -52,6 +53,7 @@ export type Database = {
           id?: string
           misses?: string
           nudged_stone?: string
+          overall_rating?: string
           reply?: string
           stone_statuses?: Json
           user_id: string
@@ -64,6 +66,7 @@ export type Database = {
           id?: string
           misses?: string
           nudged_stone?: string
+          overall_rating?: string
           reply?: string
           stone_statuses?: Json
           user_id?: string
