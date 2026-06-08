@@ -425,6 +425,8 @@ function HomePage() {
             </ul>
           )}
         </section>
+          </div>
+        </div>
       </div>
     </main>
   );
