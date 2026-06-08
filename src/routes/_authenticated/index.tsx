@@ -48,6 +48,7 @@ function HomePage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [bigGoal, setBigGoal] = useState<BigGoal | null>(null);
   const [goalLoaded, setGoalLoaded] = useState(false);
+  const [stoneTaps, setStoneTaps] = useState<Record<string, boolean | null>>({});
 
   const submit = useServerFn(submitCheckIn);
   const fetchGoal = useServerFn(getMyGoal);
@@ -59,13 +60,16 @@ function HomePage() {
       .then((res) => {
         const g = res.goal;
         if (g) {
+          const stones = Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [];
           setBigGoal({
             big_goal: g.big_goal ?? "",
             target_date: g.target_date ?? null,
-            stones: Array.isArray(g.stones) ? (g.stones as Array<{ text: string }>) : [],
+            stones,
           });
+          const initial: Record<string, boolean | null> = {};
+          stones.forEach((s) => { initial[s.text] = null; });
+          setStoneTaps(initial);
         } else {
-          // First-time user — send them to set their goal
           navigate({ to: "/goals" });
         }
       })
@@ -88,6 +92,10 @@ function HomePage() {
     setHistory((data ?? []) as PastCheckIn[]);
   }
 
+  function setTap(text: string, worked: boolean) {
+    setStoneTaps((prev) => ({ ...prev, [text]: prev[text] === worked ? null : worked }));
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!goals.trim() && !wins.trim() && !misses.trim()) {
@@ -97,11 +105,17 @@ function HomePage() {
     setSubmitting(true);
     setReply(null);
     try {
-      const result = await submit({ data: { goals, wins, misses } });
+      const stone_statuses = (bigGoal?.stones ?? [])
+        .filter((s) => stoneTaps[s.text] === true || stoneTaps[s.text] === false)
+        .map((s) => ({ text: s.text, worked: !!stoneTaps[s.text] }));
+      const result = await submit({ data: { goals, wins, misses, stone_statuses } });
       setReply(result.reply);
       setGoals("");
       setWins("");
       setMisses("");
+      const cleared: Record<string, boolean | null> = {};
+      (bigGoal?.stones ?? []).forEach((s) => { cleared[s.text] = null; });
+      setStoneTaps(cleared);
       loadHistory();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
@@ -110,6 +124,7 @@ function HomePage() {
       setSubmitting(false);
     }
   }
+
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -168,15 +183,45 @@ function HomePage() {
               </Link>
             </div>
             {bigGoal.stones.length > 0 && (
-              <ul className="mt-3 space-y-1.5 pl-6">
-                {bigGoal.stones.map((s, i) => (
-                  <li key={i} className="text-xs text-foreground/80 flex gap-2">
-                    <span className="text-primary">▸</span>
-                    <span className="break-words">{s.text}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4 space-y-2.5">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                  Yesterday — did you work on each stone?
+                </div>
+                {bigGoal.stones.map((s, i) => {
+                  const tap = stoneTaps[s.text];
+                  return (
+                    <div key={i} className="rounded-lg border border-border bg-background p-2.5">
+                      <p className="text-sm text-foreground break-words mb-2">{s.text}</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTap(s.text, true)}
+                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                            tap === true
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                          }`}
+                        >
+                          Worked on it
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTap(s.text, false)}
+                          className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
+                            tap === false
+                              ? "bg-muted text-foreground border-foreground/40"
+                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                          }`}
+                        >
+                          Didn't
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
+
           </section>
         )}
 
