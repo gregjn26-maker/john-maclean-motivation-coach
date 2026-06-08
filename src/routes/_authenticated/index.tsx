@@ -10,13 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Target, Pencil } from "lucide-react";
+import { Pencil, ArrowRight } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Your check-in — John Maclean" },
-      { name: "description", content: "Log your goals, wins and misses, and hear from John." },
+      { name: "description", content: "Log your wins and misses, and hear from John." },
     ],
   }),
   component: HomePage,
@@ -38,6 +39,8 @@ interface BigGoal {
   stones: Array<{ text: string }>;
 }
 
+type Rating = "" | "hit" | "partly" | "missed";
+
 function timeGreeting(name: string) {
   const h = new Date().getHours();
   const part = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -55,8 +58,10 @@ function HomePage() {
   const [goals, setGoals] = useState("");
   const [wins, setWins] = useState("");
   const [misses, setMisses] = useState("");
+  const [rating, setRating] = useState<Rating>("");
   const [submitting, setSubmitting] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
+  const [submittedSummary, setSubmittedSummary] = useState<{ goals: string; wins: string; misses: string } | null>(null);
   const [history, setHistory] = useState<PastCheckIn[]>([]);
   const [checkInCount, setCheckInCount] = useState(0);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -149,15 +154,19 @@ function HomePage() {
     }
     setSubmitting(true);
     setReply(null);
+    setSubmittedSummary(null);
     try {
       const stone_statuses = (bigGoal?.stones ?? [])
         .filter((s) => stoneTaps[s.text] === true || stoneTaps[s.text] === false)
         .map((s) => ({ text: s.text, worked: !!stoneTaps[s.text] }));
-      const result = await submit({ data: { goals, wins, misses, stone_statuses } });
+      const summary = { goals, wins, misses };
+      const result = await submit({ data: { ...summary, stone_statuses, overall_rating: rating } });
       setReply(result.reply);
+      setSubmittedSummary(summary);
       setGoals("");
       setWins("");
       setMisses("");
+      setRating("");
       const cleared: Record<string, boolean | null> = {};
       (bigGoal?.stones ?? []).forEach((s) => { cleared[s.text] = null; });
       setStoneTaps(cleared);
@@ -175,18 +184,15 @@ function HomePage() {
     navigate({ to: "/auth", replace: true });
   }
 
-  // First-name capture screen (blocking) before the check-in form
   if (nameLoaded && needsName) {
     return (
-      <main className="min-h-screen bg-background flex items-center px-5 py-10">
-        <div className="mx-auto max-w-md w-full rounded-xl border border-border bg-card p-6">
-          <h1 className="text-xl font-semibold text-foreground">G'day.</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            What should John call you?
-          </p>
+      <main className="min-h-screen bg-brand-bg flex items-center px-5 py-10">
+        <div className="mx-auto max-w-md w-full rounded-2xl bg-white border border-border p-6">
+          <h1 className="text-xl font-semibold text-brand-navy">G'day.</h1>
+          <p className="mt-2 text-sm text-brand-muted">What should John call you?</p>
           <form onSubmit={onSaveName} className="mt-5 space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-sm">First name</Label>
+              <Label className="text-sm text-brand-text">First name</Label>
               <Input
                 autoFocus
                 value={nameInput}
@@ -196,7 +202,11 @@ function HomePage() {
                 maxLength={60}
               />
             </div>
-            <Button type="submit" disabled={savingName} className="w-full h-12 text-base">
+            <Button
+              type="submit"
+              disabled={savingName}
+              className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white"
+            >
               {savingName ? "Saving…" : "Save"}
             </Button>
           </form>
@@ -206,77 +216,69 @@ function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center justify-between px-5 py-3">
-          <div>
-            <h1 className="text-base font-semibold text-foreground leading-tight">John Maclean</h1>
-            <p className="text-xs text-muted-foreground leading-tight">Your Coach</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/welcome" className="text-xs text-muted-foreground hover:text-foreground">
-              About
-            </Link>
-            <Link to="/goals" className="text-xs text-muted-foreground hover:text-foreground">
-              My goals
-            </Link>
-            <button
-              onClick={signOut}
-              className="text-xs text-muted-foreground hover:text-foreground"
-              aria-label="Sign out"
-            >
+    <main className="min-h-screen bg-brand-bg pb-24">
+      <AppHeader
+        rightExtra={
+          <nav className="flex items-center gap-3">
+            <Link to="/progress" className="text-xs text-white/80 hover:text-white">Progress</Link>
+            <Link to="/goals" className="text-xs text-white/80 hover:text-white">Goals</Link>
+            <button onClick={signOut} className="text-xs text-white/60 hover:text-white" aria-label="Sign out">
               Sign out
             </button>
-          </div>
-        </div>
-      </header>
+          </nav>
+        }
+      />
 
-      <div className="mx-auto max-w-xl px-5 pt-5 space-y-6">
+      <div className="mx-auto max-w-xl px-5 pt-5 space-y-5">
+        {/* Greeting + count */}
+        <section>
+          <h1 className="text-2xl font-semibold text-brand-navy leading-tight">
+            {timeGreeting(firstName)}
+          </h1>
+          <p className="mt-1 text-sm text-brand-muted">
+            {loadingHistory ? "…" : `${checkInCount} check-in${checkInCount === 1 ? "" : "s"}`}
+          </p>
+        </section>
+
+        {/* Goal recap card */}
         {goalLoaded && bigGoal && (
-          <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <section className="rounded-2xl bg-white border border-border p-4">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2 min-w-0">
-                <Target className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-wide text-primary font-semibold">Your big goal</div>
-                  <p className="text-sm text-foreground font-medium mt-0.5 leading-snug break-words">
-                    {bigGoal.big_goal || "(not set)"}
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-wide text-brand-muted font-semibold">Since your last check-in</div>
+                <p className="text-base text-brand-navy font-semibold mt-1 leading-snug break-words">
+                  {bigGoal.big_goal || "(goal not set)"}
+                </p>
+                {bigGoal.target_date && (
+                  <p className="text-xs text-brand-muted mt-0.5">
+                    by {new Date(bigGoal.target_date).toLocaleDateString("en-AU", {
+                      day: "numeric", month: "short", year: "numeric",
+                    })}
                   </p>
-                  {bigGoal.target_date && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      by {new Date(bigGoal.target_date).toLocaleDateString("en-AU", {
-                        day: "numeric", month: "short", year: "numeric",
-                      })}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
-              <Link
-                to="/goals"
-                className="text-muted-foreground hover:text-foreground flex-shrink-0"
-                aria-label="Edit goal"
-              >
+              <Link to="/goals" className="text-brand-muted hover:text-brand-navy flex-shrink-0" aria-label="Edit goal">
                 <Pencil className="h-4 w-4" />
               </Link>
             </div>
             {bigGoal.stones.length > 0 && (
-              <div className="mt-4 space-y-2.5">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  Since last time — did you work on each stone?
+              <div className="mt-4 space-y-2">
+                <div className="text-[11px] uppercase tracking-wide text-brand-muted font-semibold">
+                  Did you work on each stone?
                 </div>
                 {bigGoal.stones.map((s, i) => {
                   const tap = stoneTaps[s.text];
                   return (
-                    <div key={i} className="rounded-lg border border-border bg-background p-2.5">
-                      <p className="text-sm text-foreground break-words mb-2">{s.text}</p>
+                    <div key={i} className="rounded-lg bg-brand-bg p-2.5">
+                      <p className="text-sm text-brand-text break-words mb-2">{s.text}</p>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setTap(s.text, true)}
                           className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
                             tap === true
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                              ? "bg-brand-green text-white border-brand-green"
+                              : "bg-white text-brand-muted border-border hover:text-brand-text"
                           }`}
                         >
                           Worked on it
@@ -286,8 +288,8 @@ function HomePage() {
                           onClick={() => setTap(s.text, false)}
                           className={`flex-1 h-9 rounded-md text-xs font-medium border transition-colors ${
                             tap === false
-                              ? "bg-muted text-foreground border-foreground/40"
-                              : "bg-background text-muted-foreground border-border hover:text-foreground"
+                              ? "bg-brand-red text-white border-brand-red"
+                              : "bg-white text-brand-muted border-border hover:text-brand-text"
                           }`}
                         >
                           Didn't
@@ -301,82 +303,116 @@ function HomePage() {
           </section>
         )}
 
-        <section className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{timeGreeting(firstName)}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Take a minute. How have things been since last time?
-              </p>
+        {/* Check-in form */}
+        <section className="rounded-2xl bg-white border border-border p-5">
+          <form onSubmit={onSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <Label className="text-sm text-brand-text">Since your last check-in</Label>
+              <Textarea
+                rows={2}
+                placeholder="What have you been working towards?"
+                value={goals}
+                onChange={(e) => setGoals(e.target.value)}
+                className="text-base resize-none border-border focus-visible:ring-brand-orange"
+              />
             </div>
-            <div className="text-right flex-shrink-0">
-              <div className="text-2xl font-bold text-primary leading-none">{checkInCount}</div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1">check-ins</div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold text-brand-green">Wins</Label>
+              <Textarea
+                rows={3}
+                placeholder="What went well? Even the small stuff."
+                value={wins}
+                onChange={(e) => setWins(e.target.value)}
+                className="text-base resize-none border-2 border-brand-green/40 focus-visible:border-brand-green focus-visible:ring-0"
+              />
             </div>
-          </div>
 
-          <form onSubmit={onSubmit} className="mt-5 space-y-4">
-            <Field
-              label="Since your last check-in"
-              placeholder="What have you been working towards?"
-              value={goals}
-              onChange={setGoals}
-            />
-            <Field
-              label="Wins"
-              placeholder="What went well? Even the small stuff."
-              value={wins}
-              onChange={setWins}
-            />
-            <Field
-              label="Misses"
-              placeholder="What didn't land? What got in the way?"
-              value={misses}
-              onChange={setMisses}
-            />
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold text-brand-red">Misses / obstacles</Label>
+              <Textarea
+                rows={3}
+                placeholder="What didn't land? What got in the way?"
+                value={misses}
+                onChange={(e) => setMisses(e.target.value)}
+                className="text-base resize-none border-2 border-brand-red/40 focus-visible:border-brand-red focus-visible:ring-0"
+              />
+            </div>
 
-            <Button type="submit" disabled={submitting} className="w-full h-12 text-base">
-              {submitting ? "John is writing back…" : "Send check-in"}
+            <div className="space-y-2">
+              <Label className="text-sm text-brand-text">How did it go overall?</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <RatingButton label="Hit it" active={rating === "hit"} colour="green" onClick={() => setRating(rating === "hit" ? "" : "hit")} />
+                <RatingButton label="Partly" active={rating === "partly"} colour="orange" onClick={() => setRating(rating === "partly" ? "" : "partly")} />
+                <RatingButton label="Missed" active={rating === "missed"} colour="red" onClick={() => setRating(rating === "missed" ? "" : "missed")} />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold"
+            >
+              {submitting ? "John is writing back…" : (
+                <span className="inline-flex items-center gap-2">Talk to John <ArrowRight className="h-4 w-4" /></span>
+              )}
             </Button>
           </form>
         </section>
 
-        {reply && (
-          <section className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+        {/* Chat-style reply */}
+        {reply && submittedSummary && (
+          <section className="space-y-3">
+            {/* User bubble */}
+            <div className="rounded-2xl bg-brand-blue p-4 text-sm text-brand-text leading-relaxed space-y-2 ml-6">
+              {submittedSummary.goals && <p><span className="font-semibold">Since last:</span> {submittedSummary.goals}</p>}
+              {submittedSummary.wins && <p><span className="font-semibold text-brand-green">Wins:</span> {submittedSummary.wins}</p>}
+              {submittedSummary.misses && <p><span className="font-semibold text-brand-red">Misses:</span> {submittedSummary.misses}</p>}
+            </div>
+
+            {/* John card */}
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 h-10 w-10 rounded-full bg-brand-orange text-white inline-flex items-center justify-center text-sm font-bold">
                 JM
               </span>
-              <div className="text-sm font-medium text-foreground">From John</div>
-            </div>
-            <div className="text-[15px] leading-relaxed text-foreground whitespace-pre-wrap">
-              {reply}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <div className="text-sm font-semibold text-brand-navy">John Maclean</div>
+                  <div className="text-xs text-brand-muted">Just now · AI Coach</div>
+                </div>
+                <div className="mt-2 rounded-2xl bg-brand-cream border-l-4 border-brand-orange p-4">
+                  <div className="text-[15px] leading-relaxed text-brand-text whitespace-pre-wrap">
+                    {reply}
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         )}
 
+        {/* History */}
         <section>
-          <h3 className="text-sm font-semibold text-foreground mb-3 px-1">Your history</h3>
+          <h3 className="text-sm font-semibold text-brand-navy mb-3 px-1">Your history</h3>
           {loadingHistory ? (
-            <p className="text-sm text-muted-foreground px-1">Loading…</p>
+            <p className="text-sm text-brand-muted px-1">Loading…</p>
           ) : history.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-1">No check-ins yet. Your first one is above.</p>
+            <p className="text-sm text-brand-muted px-1">No check-ins yet. Your first one is above.</p>
           ) : (
             <ul className="space-y-3">
               {history.map((h) => (
-                <li key={h.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-xs text-muted-foreground">
+                <li key={h.id} className="rounded-2xl bg-white border border-border p-4">
+                  <div className="text-xs text-brand-muted">
                     {new Date(h.created_at).toLocaleDateString("en-AU", {
                       weekday: "short", day: "numeric", month: "short",
                     })}
                   </div>
                   <HistoryLine label="Goals" value={h.goals} />
-                  <HistoryLine label="Wins" value={h.wins} />
-                  <HistoryLine label="Misses" value={h.misses} />
+                  <HistoryLine label="Wins" value={h.wins} valueClass="text-brand-green" />
+                  <HistoryLine label="Misses" value={h.misses} valueClass="text-brand-red" />
                   {h.reply && (
                     <div className="mt-3 border-t border-border pt-3">
-                      <div className="text-xs font-medium text-primary mb-1">John</div>
-                      <p className="text-sm text-foreground whitespace-pre-wrap">{h.reply}</p>
+                      <div className="text-xs font-semibold text-brand-orange mb-1">John</div>
+                      <p className="text-sm text-brand-text whitespace-pre-wrap">{h.reply}</p>
                     </div>
                   )}
                 </li>
@@ -389,29 +425,33 @@ function HomePage() {
   );
 }
 
-function Field({ label, placeholder, value, onChange }: {
-  label: string; placeholder: string; value: string; onChange: (v: string) => void;
-}) {
+function RatingButton({
+  label, active, colour, onClick,
+}: { label: string; active: boolean; colour: "green" | "orange" | "red"; onClick: () => void }) {
+  const activeMap: Record<string, string> = {
+    green: "bg-brand-green text-white border-brand-green",
+    orange: "bg-brand-orange text-white border-brand-orange",
+    red: "bg-brand-red text-white border-brand-red",
+  };
   return (
-    <div className="space-y-1.5">
-      <Label className="text-sm">{label}</Label>
-      <Textarea
-        rows={3}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="text-base resize-none"
-      />
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-11 rounded-md text-sm font-semibold border-2 transition-colors ${
+        active ? activeMap[colour] : "bg-white text-brand-text border-border hover:border-brand-muted"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
-function HistoryLine({ label, value }: { label: string; value: string }) {
+function HistoryLine({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
   if (!value?.trim()) return null;
   return (
     <div className="mt-2 text-sm">
-      <span className="font-medium text-foreground">{label}: </span>
-      <span className="text-muted-foreground whitespace-pre-wrap">{value}</span>
+      <span className="font-semibold text-brand-navy">{label}: </span>
+      <span className={`whitespace-pre-wrap ${valueClass ?? "text-brand-text"}`}>{value}</span>
     </div>
   );
 }
