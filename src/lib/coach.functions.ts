@@ -58,6 +58,41 @@ function normaliseText(s: string) {
   return (s || "").trim().toLowerCase();
 }
 
+function currentPeriodRange(cadence: string | undefined):
+  { start: Date; end: Date; label: string } | null {
+  const now = new Date();
+  if (cadence === "month") {
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+      label: "this month",
+    };
+  }
+  if (cadence === "quarter") {
+    const q = Math.floor(now.getMonth() / 3);
+    return {
+      start: new Date(now.getFullYear(), q * 3, 1),
+      end: new Date(now.getFullYear(), q * 3 + 3, 1),
+      label: "this quarter",
+    };
+  }
+  if (cadence === "week") {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    // Week starts Monday
+    const day = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - day);
+    const end = new Date(d);
+    end.setDate(end.getDate() + 7);
+    return { start: d, end, label: "this week" };
+  }
+  if (cadence === "day") {
+    const d = new Date(now); d.setHours(0, 0, 0, 0);
+    const end = new Date(d); end.setDate(end.getDate() + 1);
+    return { start: d, end, label: "today" };
+  }
+  return null;
+
 /**
  * For a given stone, compute how many consecutive most-recent check-ins it
  * has gone UNTOUCHED for (worked === false or absent). Stops at the first
