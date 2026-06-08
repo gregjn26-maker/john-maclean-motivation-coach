@@ -86,9 +86,38 @@ function buildUserMessage(
       bigGoal.stones.forEach((s, i) => {
         const streak = untouchedStreak(s.text, past);
         const todayMatch = today.stone_statuses.find((t) => normaliseText(t.text) === normaliseText(s.text));
-        const status = todayMatch ? (todayMatch.worked ? "WORKED ON since last check-in" : "did NOT work on since last check-in") : "no answer this check-in";
+        const hasTarget = typeof s.target === "number" && s.target > 0;
+        const unit = (s.unit ?? "").trim();
+        const cadence = s.cadence === "week" ? "per week" : s.cadence === "day" ? "per day" : "";
+        const targetStr = hasTarget ? ` — target ${s.target}${unit ? " " + unit : ""}${cadence ? " " + cadence : ""}` : "";
+
+        let status: string;
+        if (todayMatch) {
+          if (hasTarget) {
+            const amt = typeof todayMatch.amount === "number" ? todayMatch.amount : (todayMatch.worked ? "(yes, no number)" : 0);
+            status = `this check-in: ${amt}${unit ? " " + unit : ""} (target ${s.target})`;
+          } else {
+            status = todayMatch.worked ? "WORKED ON since last check-in" : "did NOT work on since last check-in";
+          }
+        } else {
+          status = "no answer this check-in";
+        }
+
+        // Recent actuals (most recent 5 check-ins) for measurable stones
+        let recent = "";
+        if (hasTarget) {
+          const recentVals = past.slice(0, 5).map((p) => {
+            const arr = Array.isArray(p.stone_statuses) ? p.stone_statuses : [];
+            const m = arr.find((x) => normaliseText(x.text) === normaliseText(s.text));
+            if (!m) return "—";
+            if (typeof m.amount === "number") return String(m.amount);
+            return m.worked ? "✓" : "0";
+          });
+          if (recentVals.length) recent = `; recent actuals: [${recentVals.join(", ")}]`;
+        }
+
         const nudged = recentlyNudged(s.text, past) ? "  [you already nudged this step in the last 2 check-ins]" : "";
-        goalBlock += `  ${i + 1}. ${s.text} — ${status}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
+        goalBlock += `  ${i + 1}. ${s.text}${targetStr} — ${status}${recent}; untouched streak: ${streak} check-in(s) in a row${nudged}\n`;
       });
     }
     goalBlock += "\n---\n\n";
