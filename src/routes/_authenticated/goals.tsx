@@ -117,9 +117,7 @@ function GoalsPage() {
         } as { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" };
       })
       .filter((x): x is { text: string; target: number | null; unit: string; cadence: "day" | "week" | "" } => x !== null);
-    if (!firstName.trim()) return toast.error("Add your first name.");
-    if (!bigGoal.trim()) return toast.error("Add your big goal.");
-    if (cleanedStones.length < 1) return toast.error("Add at least 1 stone.");
+    if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
     try {
       await persistName({ data: { first_name: firstName.trim(), last_name: lastName.trim() } });
