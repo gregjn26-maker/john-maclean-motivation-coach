@@ -452,7 +452,7 @@ function HomePage() {
               className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold"
             >
               {submitting ? "John is writing back…" : (
-                <span className="inline-flex items-center gap-2">Talk to John <ArrowRight className="h-4 w-4" /></span>
+                <span className="inline-flex items-center gap-2">What would John say? <ArrowRight className="h-4 w-4" /></span>
               )}
             </Button>
           </form>
