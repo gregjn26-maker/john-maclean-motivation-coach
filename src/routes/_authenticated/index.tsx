@@ -312,13 +312,6 @@ function HomePage() {
                     : "/day";
                   const unit = (s.unit ?? "").trim();
                   const achievedVal = stoneAchieved[s.text] ?? "";
-                  const totalVal = stoneTotals[s.text] ?? "";
-                  const a = Number(achievedVal);
-                  const t = Number(totalVal);
-                  const livePct =
-                    metric === "rate" && Number.isFinite(a) && Number.isFinite(t) && t > 0
-                      ? Math.round((a / t) * 100)
-                      : null;
                   return (
                     <div key={i} className="rounded-lg bg-brand-bg p-2.5">
                       <div className="flex items-baseline justify-between gap-2 mb-2">
