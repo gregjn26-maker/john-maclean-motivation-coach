@@ -444,31 +444,9 @@ function GoalsPage() {
                             <option value="quarter">per quarter</option>
                           </select>
                         </div>
-                        <div className="grid grid-cols-1 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-[11px] text-brand-muted">Numerator (the "achieved" thing)</Label>
-                            <Input
-                              value={s.numerator_label}
-                              onChange={(e) => updateStone(i, { numerator_label: e.target.value })}
-                              placeholder="e.g. units sold with the add-on"
-                              className="text-sm h-10 bg-white"
-                              maxLength={80}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-[11px] text-brand-muted">Denominator (the "total" thing)</Label>
-                            <Input
-                              value={s.denominator_label}
-                              onChange={(e) => updateStone(i, { denominator_label: e.target.value })}
-                              placeholder="e.g. total units sold"
-                              className="text-sm h-10 bg-white"
-                              maxLength={80}
-                            />
-                          </div>
-                          <p className="text-[11px] text-brand-muted leading-snug">
-                            At each check-in you'll enter both numbers; we'll work out the rate.
-                          </p>
-                        </div>
+                        <p className="text-[11px] text-brand-muted leading-snug">
+                          At each check-in you'll enter the percentage you hit.
+                        </p>
                       </div>
                     )}
                   </div>
