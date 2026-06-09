@@ -355,40 +355,25 @@ function HomePage() {
                         </div>
                       )}
                       {metric === "rate" && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-brand-muted whitespace-nowrap">
+                            % {cadenceLbl}:
+                          </Label>
+                          <div className="relative">
                             <Input
                               type="number"
                               inputMode="numeric"
                               min={0}
+                              max={100}
                               value={achievedVal}
                               onChange={(e) =>
                                 setStoneAchieved((prev) => ({ ...prev, [s.text]: e.target.value }))
                               }
-                              placeholder="6"
-                              className="h-9 w-20 text-base bg-white"
+                              placeholder="0"
+                              className="h-9 w-24 text-base bg-white pr-7"
                             />
-                            <span className="text-xs text-brand-muted">of</span>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              min={0}
-                              value={totalVal}
-                              onChange={(e) =>
-                                setStoneTotals((prev) => ({ ...prev, [s.text]: e.target.value }))
-                              }
-                              placeholder="20"
-                              className="h-9 w-20 text-base bg-white"
-                            />
-                            {livePct !== null && (
-                              <span className="text-xs text-brand-text font-medium">= {livePct}%</span>
-                            )}
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-muted pointer-events-none">%</span>
                           </div>
-                          {(s.numerator_label || s.denominator_label) && (
-                            <p className="text-[10px] text-brand-muted leading-snug">
-                              {(s.numerator_label || "achieved").trim()} of {(s.denominator_label || "total").trim()} {cadenceLbl}
-                            </p>
-                          )}
                         </div>
                       )}
                       {metric === "habit" && (
