@@ -196,12 +196,10 @@ function HomePage() {
           }
           if (metric === "rate") {
             const rawA = (stoneAchieved[s.text] ?? "").trim();
-            const rawT = (stoneTotals[s.text] ?? "").trim();
-            if (rawA === "" && rawT === "") return null;
+            if (rawA === "") return null;
             const a = Number(rawA);
-            const t = Number(rawT);
-            if (!Number.isFinite(a) || a < 0 || !Number.isFinite(t) || t < 0) return null;
-            return { text: s.text, worked: a > 0, achieved: a, total: t };
+            if (!Number.isFinite(a) || a < 0 || a > 100) return null;
+            return { text: s.text, worked: a > 0, achieved: a, total: 100 };
           }
           const tap = stoneTaps[s.text];
           if (tap !== true && tap !== false) return null;
