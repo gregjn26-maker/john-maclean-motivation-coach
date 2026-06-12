@@ -96,24 +96,109 @@ function attentionTextColour(streak: number): string {
   return "text-brand-green";
 }
 
-function ratingScore(r: string): number {
-  if (r === "hit") return 1;
-  if (r === "partly") return 0.5;
-  return 0;
-}
-
 function lastLine(text: string): string {
   if (!text) return "";
   const paras = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return paras[paras.length - 1] ?? "";
 }
 
-function dayKey(d: Date): string {
-  // Local-date key (YYYY-MM-DD) — avoid toISOString which shifts to UTC
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/**
+ * On-pace check for a single stone at a moment in time.
+ * Returns { applicable: false } when there isn't enough data to judge yet.
+ */
+function stoneOnPaceAt(
+  stone: StoneMeta,
+  rows: CheckInRow[],
+  goal: GoalData | null,
+  asOf: Date,
+): { applicable: boolean; onPace: boolean } {
+  const key = normaliseText(stone.text);
+  const metric = stoneMetric(stone);
+  const scoped = rows.filter((r) => new Date(r.created_at).getTime() <= asOf.getTime());
+
+  if (metric === "rate" && typeof stone.target === "number" && stone.target > 0) {
+    let latest: number | null = null;
+    for (const r of scoped) {
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      const m = arr.find((x) => normaliseText(x.text) === key);
+      if (m && typeof m.achieved === "number") { latest = m.achieved; break; }
+    }
+    if (latest === null) return { applicable: false, onPace: false };
+    let expected = stone.target;
+    if (goal?.target_date && goal?.created_at) {
+      const start = new Date(goal.created_at).getTime();
+      const end = new Date(goal.target_date).getTime();
+      if (end > start) {
+        const e = Math.min(1, Math.max(0, (asOf.getTime() - start) / (end - start)));
+        expected = stone.target * e;
+      }
+    }
+    const ratio = expected > 0 ? latest / expected : (latest >= stone.target ? 1 : 0);
+    return { applicable: true, onPace: ratio >= 0.8 };
+  }
+
+  if (metric === "count" && typeof stone.target === "number" && stone.target > 0 && stone.cadence) {
+    const cadence = stone.cadence;
+    let periodStart: Date, periodEnd: Date;
+    if (cadence === "month") {
+      periodStart = new Date(asOf.getFullYear(), asOf.getMonth(), 1);
+      periodEnd = new Date(asOf.getFullYear(), asOf.getMonth() + 1, 1);
+    } else if (cadence === "quarter") {
+      const q = Math.floor(asOf.getMonth() / 3);
+      periodStart = new Date(asOf.getFullYear(), q * 3, 1);
+      periodEnd = new Date(asOf.getFullYear(), q * 3 + 3, 1);
+    } else if (cadence === "week") {
+      const d = new Date(asOf); d.setHours(0,0,0,0);
+      const dayIdx = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - dayIdx);
+      periodStart = d;
+      periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 7);
+    } else {
+      const d = new Date(asOf); d.setHours(0,0,0,0);
+      periodStart = d;
+      periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 1);
+    }
+    let total = 0;
+    let anyEntry = false;
+    for (const r of scoped) {
+      const t = new Date(r.created_at);
+      if (t < periodStart || t >= periodEnd) continue;
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      const m = arr.find((x) => normaliseText(x.text) === key);
+      if (!m) continue;
+      anyEntry = true;
+      if (typeof m.amount === "number") total += m.amount;
+    }
+    if (!anyEntry) return { applicable: false, onPace: false };
+    const periodMs = periodEnd.getTime() - periodStart.getTime();
+    const elapsed = Math.min(1, Math.max(0, (asOf.getTime() - periodStart.getTime()) / periodMs));
+    const expected = stone.target * elapsed;
+    const ratio = expected > 0 ? total / expected : (total >= stone.target ? 1 : 0);
+    return { applicable: true, onPace: ratio >= 0.8 };
+  }
+
+  if (metric === "count" && typeof stone.target === "number" && stone.target > 0) {
+    const vals: number[] = [];
+    for (const r of scoped) {
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      const m = arr.find((x) => normaliseText(x.text) === key);
+      if (!m) continue;
+      if (typeof m.amount === "number") vals.push(m.amount);
+      else if (!m.worked) vals.push(0);
+      if (vals.length >= 5) break;
+    }
+    if (vals.length === 0) return { applicable: false, onPace: false };
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return { applicable: true, onPace: avg / stone.target >= 0.8 };
+  }
+
+  // HABIT
+  for (const r of scoped) {
+    const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+    const m = arr.find((x) => normaliseText(x.text) === key);
+    if (m) return { applicable: true, onPace: !!m.worked };
+  }
+  return { applicable: false, onPace: false };
 }
 
 function ProgressPage() {
@@ -151,42 +236,28 @@ function ProgressPage() {
     })();
   }, []);
 
-  // % goals hit (treat partly as half)
-  const rated = rows.filter((r) => r.overall_rating === "hit" || r.overall_rating === "partly" || r.overall_rating === "missed");
-  const pctGoalsHit = rated.length === 0
-    ? 0
-    : Math.round((rated.reduce((acc, r) => acc + ratingScore(r.overall_rating), 0) / rated.length) * 100);
+  // On-pace NOW — % of applicable stones on-pace, judged this moment
+  const now = new Date();
+  const stones = goal?.stones ?? [];
+  const liveResults = stones.map((s) => stoneOnPaceAt(s, rows, goal, now));
+  const liveApplicable = liveResults.filter((r) => r.applicable);
+  const livePct = liveApplicable.length === 0
+    ? null
+    : Math.round((liveApplicable.filter((r) => r.onPace).length / liveApplicable.length) * 100);
 
-  // Last 14 days bar chart — % of stones worked on each day (across all check-ins that day)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days: Array<{ label: string; date: Date; pct: number | null; worked: number; total: number }> = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = dayKey(d);
-    const dayRows = rows.filter((r) => dayKey(new Date(r.created_at)) === key);
-    // Union by stone text: a stone counts as "worked" if any check-in that day marked it worked
-    const stoneMap = new Map<string, boolean>();
-    for (const r of dayRows) {
-      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
-      for (const s of arr) {
-        const k = normaliseText(s.text);
-        if (!k) continue;
-        stoneMap.set(k, (stoneMap.get(k) ?? false) || !!s.worked);
-      }
-    }
-    const total = stoneMap.size;
-    const worked = Array.from(stoneMap.values()).filter(Boolean).length;
-    const pct = total > 0 ? Math.round((worked / total) * 100) : null;
-    days.push({
-      label: d.toLocaleDateString("en-AU", { weekday: "short" })[0].toUpperCase(),
-      date: d,
-      pct,
-      worked,
-      total,
-    });
-  }
+  // On-pace TREND across the last N check-ins (oldest → newest, left → right)
+  const trendCheckIns = [...rows]
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .slice(-12);
+  const trend = trendCheckIns.map((r) => {
+    const asOf = new Date(r.created_at);
+    const results = stones.map((s) => stoneOnPaceAt(s, rows, goal, asOf));
+    const applicable = results.filter((x) => x.applicable);
+    const pct = applicable.length === 0
+      ? null
+      : Math.round((applicable.filter((x) => x.onPace).length / applicable.length) * 100);
+    return { id: r.id, date: asOf, pct };
+  });
 
   const encouragements = rows
     .filter((r) => r.reply)
@@ -213,39 +284,55 @@ function ProgressPage() {
             <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Check-ins</div>
           </div>
           <div className="rounded-2xl bg-brand-navy text-white p-5">
-            <div className="text-4xl font-bold leading-none">{loading ? "—" : `${pctGoalsHit}%`}</div>
-            <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Goals hit</div>
+            <div className="text-4xl font-bold leading-none">
+              {loading ? "—" : livePct === null ? "—" : `${livePct}%`}
+            </div>
+            <div className="text-xs uppercase tracking-wide mt-2 opacity-90">On pace now</div>
           </div>
         </div>
-        {/* 14-day chart */}
+        {/* On-pace trend across recent check-ins */}
         <section className="rounded-2xl bg-white border border-border p-5">
-          <h2 className="text-sm font-semibold text-brand-navy">Last 14 days</h2>
-          <p className="text-xs text-brand-muted mt-0.5">% of your goal steps worked on each day. Green ≥ 80%, orange ≥ 40%, red below.</p>
-          <div className="mt-4 flex items-end gap-1.5 h-32">
-            {days.map((d, i) => {
-              const hasData = d.pct !== null;
-              const pct = d.pct ?? 0;
-              const h = hasData ? Math.max(pct, 6) : 0;
-              const colour = !hasData
-                ? "bg-brand-bg border border-dashed border-border"
-                : pct >= 80 ? "bg-brand-green"
-                : pct >= 40 ? "bg-brand-orange"
-                : "bg-brand-red";
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1" title={hasData ? `${d.worked}/${d.total} steps · ${pct}%` : "no check-in"}>
-                  <div className="w-full flex items-end h-full">
-                    <div
-                      className={`w-full rounded-md ${colour}`}
-                      style={{ height: `${h || 6}%`, opacity: hasData ? 1 : 0.5 }}
-                    />
+          <h2 className="text-sm font-semibold text-brand-navy">On-pace trend</h2>
+          <p className="text-xs text-brand-muted mt-0.5">
+            % of your goal steps on-pace at each check-in. Green ≥ 80%, orange ≥ 40%, red below.
+          </p>
+          {trend.length === 0 ? (
+            <p className="text-xs text-brand-muted mt-6">No check-ins yet — your trend will appear here once you start checking in.</p>
+          ) : (
+            <div className="mt-4 flex items-end gap-1.5 h-32">
+              {trend.map((t, i) => {
+                const hasData = t.pct !== null;
+                const pct = t.pct ?? 0;
+                const h = hasData ? Math.max(pct, 6) : 6;
+                const colour = !hasData
+                  ? "bg-brand-bg border border-dashed border-border"
+                  : pct >= 80 ? "bg-brand-green"
+                  : pct >= 40 ? "bg-brand-orange"
+                  : "bg-brand-red";
+                const label = t.date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+                return (
+                  <div
+                    key={t.id}
+                    className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0"
+                    title={hasData ? `${label} · ${pct}% on-pace` : `${label} · no judgeable data`}
+                  >
+                    <div className="w-full flex items-end h-full">
+                      <div
+                        className={`w-full rounded-md ${colour}`}
+                        style={{ height: `${h}%`, opacity: hasData ? 1 : 0.5 }}
+                      />
+                    </div>
+                    <div className="text-[9px] text-brand-muted truncate w-full text-center">
+                      {i === 0 || i === trend.length - 1 ? label : ""}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-brand-muted">{d.label}</div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
           </div>
+
 
           <div className="space-y-5 lg:min-w-0">
         {/* Per-stone progress */}
