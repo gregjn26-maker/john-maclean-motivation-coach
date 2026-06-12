@@ -96,24 +96,109 @@ function attentionTextColour(streak: number): string {
   return "text-brand-green";
 }
 
-function ratingScore(r: string): number {
-  if (r === "hit") return 1;
-  if (r === "partly") return 0.5;
-  return 0;
-}
-
 function lastLine(text: string): string {
   if (!text) return "";
   const paras = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return paras[paras.length - 1] ?? "";
 }
 
-function dayKey(d: Date): string {
-  // Local-date key (YYYY-MM-DD) — avoid toISOString which shifts to UTC
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/**
+ * On-pace check for a single stone at a moment in time.
+ * Returns { applicable: false } when there isn't enough data to judge yet.
+ */
+function stoneOnPaceAt(
+  stone: StoneMeta,
+  rows: CheckInRow[],
+  goal: GoalData | null,
+  asOf: Date,
+): { applicable: boolean; onPace: boolean } {
+  const key = normaliseText(stone.text);
+  const metric = stoneMetric(stone);
+  const scoped = rows.filter((r) => new Date(r.created_at).getTime() <= asOf.getTime());
+
+  if (metric === "rate" && typeof stone.target === "number" && stone.target > 0) {
+    let latest: number | null = null;
+    for (const r of scoped) {
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      const m = arr.find((x) => normaliseText(x.text) === key);
+      if (m && typeof m.achieved === "number") { latest = m.achieved; break; }
+    }
+    if (latest === null) return { applicable: false, onPace: false };
+    let expected = stone.target;
+    if (goal?.target_date && goal?.created_at) {
+      const start = new Date(goal.created_at).getTime();
+      const end = new Date(goal.target_date).getTime();
+      if (end > start) {
+        const e = Math.min(1, Math.max(0, (asOf.getTime() - start) / (end - start)));
+        expected = stone.target * e;
+      }
+    }
+    const ratio = expected > 0 ? latest / expected : (latest >= stone.target ? 1 : 0);
+    return { applicable: true, onPace: ratio >= 0.8 };
+  }
+
+  if (metric === "count" && typeof stone.target === "number" && stone.target > 0 && stone.cadence) {
+    const cadence = stone.cadence;
+    let periodStart: Date, periodEnd: Date;
+    if (cadence === "month") {
+      periodStart = new Date(asOf.getFullYear(), asOf.getMonth(), 1);
+      periodEnd = new Date(asOf.getFullYear(), asOf.getMonth() + 1, 1);
+    } else if (cadence === "quarter") {
+      const q = Math.floor(asOf.getMonth() / 3);
+      periodStart = new Date(asOf.getFullYear(), q * 3, 1);
+      periodEnd = new Date(asOf.getFullYear(), q * 3 + 3, 1);
+    } else if (cadence === "week") {
+      const d = new Date(asOf); d.setHours(0,0,0,0);
+      const dayIdx = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - dayIdx);
+      periodStart = d;
+      periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 7);
+    } else {
+      const d = new Date(asOf); d.setHours(0,0,0,0);
+      periodStart = d;
+      periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 1);
+    }
+    let total = 0;
+    let anyEntry = false;
+    for (const r of scoped) {
+      const t = new Date(r.created_at);
+      if (t < periodStart || t >= periodEnd) continue;
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      const m = arr.find((x) => normaliseText(x.text) === key);
+      if (!m) continue;
+      anyEntry = true;
+      if (typeof m.amount === "number") total += m.amount;
+    }
+    if (!anyEntry) return { applicable: false, onPace: false };
+    const periodMs = periodEnd.getTime() - periodStart.getTime();
+    const elapsed = Math.min(1, Math.max(0, (asOf.getTime() - periodStart.getTime()) / periodMs));
+    const expected = stone.target * elapsed;
+    const ratio = expected > 0 ? total / expected : (total >= stone.target ? 1 : 0);
+    return { applicable: true, onPace: ratio >= 0.8 };
+  }
+
+  if (metric === "count" && typeof stone.target === "number" && stone.target > 0) {
+    const vals: number[] = [];
+    for (const r of scoped) {
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      const m = arr.find((x) => normaliseText(x.text) === key);
+      if (!m) continue;
+      if (typeof m.amount === "number") vals.push(m.amount);
+      else if (!m.worked) vals.push(0);
+      if (vals.length >= 5) break;
+    }
+    if (vals.length === 0) return { applicable: false, onPace: false };
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return { applicable: true, onPace: avg / stone.target >= 0.8 };
+  }
+
+  // HABIT
+  for (const r of scoped) {
+    const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+    const m = arr.find((x) => normaliseText(x.text) === key);
+    if (m) return { applicable: true, onPace: !!m.worked };
+  }
+  return { applicable: false, onPace: false };
 }
 
 function ProgressPage() {
