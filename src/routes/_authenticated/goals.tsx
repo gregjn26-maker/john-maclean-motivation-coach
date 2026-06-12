@@ -143,19 +143,25 @@ function GoalsPage() {
       numerator_label: string;
       denominator_label: string;
     };
+    const countStoneMissingTarget = stones.find((s) => {
+      const n = Number(s.target);
+      return s.text.trim() && s.metric === "count" && (!Number.isFinite(n) || n <= 0);
+    });
+    if (countStoneMissingTarget) {
+      return toast.error("Add a target number for each count stone before saving.", { duration: 6000 });
+    }
     const cleanedStones: CleanedStone[] = stones
       .map((s): CleanedStone | null => {
         const text = s.text.trim();
         if (!text) return null;
         if (s.metric === "count") {
           const n = Number(s.target);
-          const hasTarget = Number.isFinite(n) && n > 0;
           return {
             text,
             metric: "count",
-            target: hasTarget ? n : null,
+            target: n,
             unit: s.unit.trim().slice(0, 40),
-            cadence: hasTarget ? s.cadence : "",
+            cadence: s.cadence,
             numerator_label: "",
             denominator_label: "",
           };
@@ -393,11 +399,12 @@ function GoalsPage() {
                         </p>
                         <div className="grid grid-cols-[90px_1fr_120px] gap-2">
                           <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Target</label>
+                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Target required</label>
                             <Input
                               type="number"
                               inputMode="numeric"
                               min={1}
+                              required
                               value={s.target}
                               onChange={(e) => updateStone(i, { target: e.target.value })}
                               placeholder="20"
