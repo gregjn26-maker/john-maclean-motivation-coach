@@ -450,13 +450,13 @@ function ProgressPage() {
                           {statusLabel}
                         </span>
                       </div>
-                      <div className="mt-1.5">
-                        <div className="relative h-5 bg-brand-bg rounded-full overflow-hidden">
+                      <div className="mt-1.5 flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden">
                           <div className={`h-full ${barColour} rounded-full transition-all`} style={{ width: `${completionPct}%` }} />
-                          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-brand-navy tabular-nums">
-                            {totalDisplay} / {target} {unit || ""} <span className="ml-1 opacity-70">({completionPct}%)</span>
-                          </div>
                         </div>
+                        <span className="text-[11px] font-semibold text-brand-navy tabular-nums flex-shrink-0">
+                          {totalDisplay} / {target} {unit || ""} <span className="opacity-70">({completionPct}%)</span>
+                        </span>
                       </div>
                       <p className="text-[10px] text-brand-muted mt-1">
                         total {periodLbl} — {Math.round(elapsed * 100)}% of period elapsed
