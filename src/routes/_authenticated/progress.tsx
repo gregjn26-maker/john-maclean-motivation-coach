@@ -347,11 +347,23 @@ function ProgressPage() {
                     periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
                     periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
                     periodLbl = "this month";
-                  } else {
+                  } else if (cadence === "quarter") {
                     const q = Math.floor(now.getMonth() / 3);
                     periodStart = new Date(now.getFullYear(), q * 3, 1);
                     periodEnd = new Date(now.getFullYear(), q * 3 + 3, 1);
                     periodLbl = "this quarter";
+                  } else if (cadence === "week") {
+                    const d = new Date(now); d.setHours(0,0,0,0);
+                    const dayIdx = (d.getDay() + 6) % 7;
+                    d.setDate(d.getDate() - dayIdx);
+                    periodStart = d;
+                    periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 7);
+                    periodLbl = "this week";
+                  } else {
+                    const d = new Date(now); d.setHours(0,0,0,0);
+                    periodStart = d;
+                    periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 1);
+                    periodLbl = "today";
                   }
                   const key = normaliseText(stone.text);
                   let total = 0;
