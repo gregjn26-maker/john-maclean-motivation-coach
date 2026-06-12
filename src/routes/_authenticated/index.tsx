@@ -330,7 +330,7 @@ function HomePage() {
                       {metric === "count" && (
                         <div className="flex items-center gap-2">
                           <Label className="text-xs text-brand-muted whitespace-nowrap">
-                            {unit ? `${unit.charAt(0).toUpperCase() + unit.slice(1)} ${cadenceLbl}:` : `${cadenceLbl}:`}
+                            {unit ? `New ${unit} since last check-in:` : `New since last check-in:`}
                           </Label>
                           <Input
                             type="number"
@@ -343,12 +343,13 @@ function HomePage() {
                             placeholder="0"
                             className="h-9 w-24 text-base bg-white"
                           />
+                          <span className="text-[11px] text-brand-muted">adds to {cadenceLbl} total</span>
                         </div>
                       )}
                       {metric === "rate" && (
                         <div className="flex items-center gap-2">
                           <Label className="text-xs text-brand-muted whitespace-nowrap">
-                            % {cadenceLbl}:
+                            Latest % reading:
                           </Label>
                           <div className="relative">
                             <Input
