@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import logo from "@/assets/john-maclean-logo-white.png.asset.json";
 
+type AuthMode = "signin" | "signup" | "forgot";
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
