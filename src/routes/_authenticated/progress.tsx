@@ -153,19 +153,34 @@ function ProgressPage() {
     ? 0
     : Math.round((rated.reduce((acc, r) => acc + ratingScore(r.overall_rating), 0) / rated.length) * 100);
 
-  // Last 14 days bar chart — take latest check-in per day
+  // Last 14 days bar chart — % of stones worked on each day (across all check-ins that day)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const days: Array<{ label: string; date: Date; rating: string }> = [];
+  const days: Array<{ label: string; date: Date; pct: number | null; worked: number; total: number }> = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const key = dayKey(d);
-    const match = rows.find((r) => dayKey(new Date(r.created_at)) === key);
+    const dayRows = rows.filter((r) => dayKey(new Date(r.created_at)) === key);
+    // Union by stone text: a stone counts as "worked" if any check-in that day marked it worked
+    const stoneMap = new Map<string, boolean>();
+    for (const r of dayRows) {
+      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+      for (const s of arr) {
+        const k = normaliseText(s.text);
+        if (!k) continue;
+        stoneMap.set(k, (stoneMap.get(k) ?? false) || !!s.worked);
+      }
+    }
+    const total = stoneMap.size;
+    const worked = Array.from(stoneMap.values()).filter(Boolean).length;
+    const pct = total > 0 ? Math.round((worked / total) * 100) : null;
     days.push({
       label: d.toLocaleDateString("en-AU", { weekday: "short" })[0].toUpperCase(),
       date: d,
-      rating: match?.overall_rating ?? "",
+      pct,
+      worked,
+      total,
     });
   }
 
@@ -198,25 +213,26 @@ function ProgressPage() {
             <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Goals hit</div>
           </div>
         </div>
-
         {/* 14-day chart */}
         <section className="rounded-2xl bg-white border border-border p-5">
           <h2 className="text-sm font-semibold text-brand-navy">Last 14 days</h2>
-          <p className="text-xs text-brand-muted mt-0.5">One bar per day. Green = hit, orange = partly, red = missed.</p>
+          <p className="text-xs text-brand-muted mt-0.5">% of your goal steps worked on each day. Green ≥ 80%, orange ≥ 40%, red below.</p>
           <div className="mt-4 flex items-end gap-1.5 h-32">
             {days.map((d, i) => {
-              const h = d.rating === "hit" ? 100 : d.rating === "partly" ? 55 : d.rating === "missed" ? 18 : 0;
-              const colour =
-                d.rating === "hit" ? "bg-brand-green" :
-                d.rating === "partly" ? "bg-brand-orange" :
-                d.rating === "missed" ? "bg-brand-red" :
-                "bg-brand-bg border border-dashed border-border";
+              const hasData = d.pct !== null;
+              const pct = d.pct ?? 0;
+              const h = hasData ? Math.max(pct, 6) : 0;
+              const colour = !hasData
+                ? "bg-brand-bg border border-dashed border-border"
+                : pct >= 80 ? "bg-brand-green"
+                : pct >= 40 ? "bg-brand-orange"
+                : "bg-brand-red";
               return (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1">
+                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1" title={hasData ? `${d.worked}/${d.total} steps · ${pct}%` : "no check-in"}>
                   <div className="w-full flex items-end h-full">
                     <div
                       className={`w-full rounded-md ${colour}`}
-                      style={{ height: `${h || 6}%`, opacity: h === 0 ? 0.5 : 1 }}
+                      style={{ height: `${h || 6}%`, opacity: hasData ? 1 : 0.5 }}
                     />
                   </div>
                   <div className="text-[10px] text-brand-muted">{d.label}</div>
