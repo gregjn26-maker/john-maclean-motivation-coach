@@ -387,33 +387,47 @@ function GoalsPage() {
                     </div>
 
                     {s.metric === "count" && (
-                      <div className="grid grid-cols-[80px_1fr_110px] gap-2">
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          min={1}
-                          value={s.target}
-                          onChange={(e) => updateStone(i, { target: e.target.value })}
-                          placeholder="20"
-                          className="text-base h-11 bg-white"
-                        />
-                        <Input
-                          value={s.unit}
-                          onChange={(e) => updateStone(i, { unit: e.target.value })}
-                          placeholder="calls / kg / mins"
-                          className="text-base h-11 bg-white"
-                          maxLength={40}
-                        />
-                        <select
-                          value={s.cadence}
-                          onChange={(e) => updateStone(i, { cadence: e.target.value as Cadence })}
-                          className="h-11 rounded-md border border-input bg-white px-2 text-sm"
-                        >
-                          <option value="day">per day</option>
-                          <option value="week">per week</option>
-                          <option value="month">per month</option>
-                          <option value="quarter">per quarter</option>
-                        </select>
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] text-brand-muted leading-snug">
+                          How many, of what, how often? e.g. <span className="font-medium text-brand-text">20 evaluations per month</span>.
+                        </p>
+                        <div className="grid grid-cols-[90px_1fr_120px] gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Target</label>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              value={s.target}
+                              onChange={(e) => updateStone(i, { target: e.target.value })}
+                              placeholder="20"
+                              className="text-base h-11 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Unit</label>
+                            <Input
+                              value={s.unit}
+                              onChange={(e) => updateStone(i, { unit: e.target.value })}
+                              placeholder="calls / evaluations / kg"
+                              className="text-base h-11 bg-white"
+                              maxLength={40}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Cadence</label>
+                            <select
+                              value={s.cadence}
+                              onChange={(e) => updateStone(i, { cadence: e.target.value as Cadence })}
+                              className="h-11 w-full rounded-md border border-input bg-white px-2 text-sm"
+                            >
+                              <option value="day">per day</option>
+                              <option value="week">per week</option>
+                              <option value="month">per month</option>
+                              <option value="quarter">per quarter</option>
+                            </select>
+                          </div>
+                        </div>
                       </div>
                     )}
 
