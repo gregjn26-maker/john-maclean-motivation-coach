@@ -183,7 +183,36 @@ function ProgressPage() {
       total,
     });
   }
-...
+
+  const encouragements = rows
+    .filter((r) => r.reply)
+    .slice(0, 6)
+    .map((r) => ({
+      id: r.id,
+      day: new Date(r.created_at).toLocaleDateString("en-AU", { weekday: "short" }).toUpperCase(),
+      line: lastLine(r.reply),
+    }))
+    .filter((e) => e.line.length > 0);
+
+  return (
+    <main className="min-h-screen bg-brand-bg pb-24">
+      <AppHeader back={{ to: "/" }} />
+      <div className="mx-auto max-w-xl lg:max-w-6xl px-5 pt-5 space-y-5">
+        <h1 className="text-xl lg:text-2xl font-semibold text-brand-navy">My Progress</h1>
+
+        <div className="lg:grid lg:grid-cols-2 lg:gap-5 space-y-5 lg:space-y-0">
+          <div className="space-y-5 lg:min-w-0">
+        {/* Stat tiles */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-brand-orange text-white p-5">
+            <div className="text-4xl font-bold leading-none">{loading ? "—" : total}</div>
+            <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Check-ins</div>
+          </div>
+          <div className="rounded-2xl bg-brand-navy text-white p-5">
+            <div className="text-4xl font-bold leading-none">{loading ? "—" : `${pctGoalsHit}%`}</div>
+            <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Goals hit</div>
+          </div>
+        </div>
         {/* 14-day chart */}
         <section className="rounded-2xl bg-white border border-border p-5">
           <h2 className="text-sm font-semibold text-brand-navy">Last 14 days</h2>
