@@ -47,6 +47,8 @@ function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
 interface GoalData {
   big_goal: string;
   stones: StoneMeta[];
+  target_date: string | null;
+  created_at: string | null;
 }
 
 function normaliseText(s: string) {
@@ -124,7 +126,7 @@ function ProgressPage() {
           .select("id, created_at, overall_rating, reply, stone_statuses", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(200),
-        supabase.from("goals").select("big_goal, stones").maybeSingle(),
+        supabase.from("goals").select("big_goal, stones, target_date, created_at").maybeSingle(),
       ]);
       setLoading(false);
       if (error) return;
@@ -138,6 +140,8 @@ function ProgressPage() {
         setGoal({
           big_goal: goalData.big_goal ?? "",
           stones: Array.isArray(goalData.stones) ? (goalData.stones as unknown as StoneMeta[]) : [],
+          target_date: goalData.target_date ?? null,
+          created_at: goalData.created_at ?? null,
         });
       }
     })();
@@ -235,19 +239,110 @@ function ProgressPage() {
                 const measurable = metric === "count";
                 const unit = (stone.unit ?? "").trim();
                 const cadence = stone.cadence ?? "";
-                const isPeriod = cadence === "month" || cadence === "quarter";
+                const isPeriod = cadence === "day" || cadence === "week" || cadence === "month" || cadence === "quarter";
                 const cadenceLbl =
                   cadence === "week" ? "per wk"
                   : cadence === "month" ? "per mo"
                   : cadence === "quarter" ? "per qtr"
                   : "per day";
 
-                // RATE metric — combine achieved/total over current period.
+                // RATE metric — cumulative-to-date: show the latest % reading vs the target.
+                // If a target date and goal start date are set, also show pacing (expected % by today).
                 if (metric === "rate" && typeof stone.target === "number" && stone.target > 0) {
+                  const key = normaliseText(stone.text);
+                  // rows are ordered desc, so the first match is the latest reading
+                  let latest: number | null = null;
+                  let latestAt: Date | null = null;
+                  let readings = 0;
+                  for (const r of rows) {
+                    const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
+                    const m = arr.find((x) => normaliseText(x.text) === key);
+                    if (m && typeof m.achieved === "number") {
+                      readings++;
+                      if (latest === null) {
+                        latest = m.achieved;
+                        latestAt = new Date(r.created_at);
+                      }
+                    }
+                  }
+                  const target = stone.target as number;
+                  const current = latest ?? 0;
+
+                  // Pacing
+                  let expected: number | null = null;
+                  let elapsedPct = 0;
+                  if (goal?.target_date && goal?.created_at) {
+                    const start = new Date(goal.created_at).getTime();
+                    const end = new Date(goal.target_date).getTime();
+                    const now = Date.now();
+                    if (end > start) {
+                      const e = Math.min(1, Math.max(0, (now - start) / (end - start)));
+                      elapsedPct = e;
+                      expected = target * e;
+                    }
+                  }
+
+                  const ratio = expected !== null && expected > 0
+                    ? current / expected
+                    : (target > 0 ? current / target : 0);
+                  const barColour =
+                    ratio >= 1 ? "bg-brand-green" : ratio >= 0.8 ? "bg-brand-gold" : "bg-brand-red";
+                  const statusText =
+                    ratio >= 1 ? "text-brand-green" : ratio >= 0.8 ? "text-brand-gold" : "text-brand-red";
+                  const statusLabel =
+                    expected !== null
+                      ? (ratio >= 1 ? "On pace" : ratio >= 0.8 ? "Close" : "Behind pace")
+                      : (ratio >= 1 ? "On target" : ratio >= 0.8 ? "Close" : "Behind");
+                  const pctBar = Math.min(100, Math.round((current / Math.max(target, 1)) * 100));
+                  const pctDisplay = latest !== null ? `${Math.round(current)}%` : "—";
+                  const latestLbl = latestAt
+                    ? latestAt.toLocaleDateString("en-AU", { day: "numeric", month: "short" })
+                    : "";
+                  return (
+                    <div key={i}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-brand-text font-medium break-words">
+                          {stone.text}
+                          <span className="text-brand-muted font-normal"> — % to date</span>
+                        </p>
+                        <span className={`text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 ${statusText}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden relative">
+                          <div className={`h-full ${barColour} rounded-full`} style={{ width: `${pctBar}%` }} />
+                          {expected !== null && (
+                            <div
+                              className="absolute top-[-2px] bottom-[-2px] w-px bg-brand-navy/60"
+                              style={{ left: `${Math.min(100, Math.round((expected / Math.max(target, 1)) * 100))}%` }}
+                              title={`Pace marker: ${Math.round(expected)}%`}
+                            />
+                          )}
+                        </div>
+                        <span className="text-xs text-brand-muted text-right tabular-nums whitespace-nowrap">
+                          {pctDisplay} / {target}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-muted mt-1">
+                        {latest !== null
+                          ? `latest reading ${latestLbl} — ${readings} update${readings === 1 ? "" : "s"} logged`
+                          : "no readings yet — enter % at your next check-in"}
+                        {expected !== null
+                          ? ` · pace ${Math.round(expected)}% (${Math.round(elapsedPct * 100)}% of timeline elapsed)`
+                          : (goal?.target_date ? "" : " · set a target date on your goal to see pacing")}
+                      </p>
+                    </div>
+                  );
+                }
+
+
+
+                if (measurable && isPeriod) {
                   const now = new Date();
-                  let periodStart: Date | null = null;
-                  let periodEnd: Date | null = null;
-                  let periodLbl = "recently";
+                  let periodStart: Date;
+                  let periodEnd: Date;
+                  let periodLbl: string;
                   if (cadence === "month") {
                     periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
                     periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -264,82 +359,11 @@ function ProgressPage() {
                     periodStart = d;
                     periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 7);
                     periodLbl = "this week";
-                  } else if (cadence === "day") {
+                  } else {
                     const d = new Date(now); d.setHours(0,0,0,0);
                     periodStart = d;
                     periodEnd = new Date(d); periodEnd.setDate(periodEnd.getDate() + 1);
                     periodLbl = "today";
-                  }
-                  const key = normaliseText(stone.text);
-                  let ach = 0;
-                  let tot = 0;
-                  const considered = periodStart
-                    ? rows.filter((r) => {
-                        const t = new Date(r.created_at);
-                        return t >= (periodStart as Date) && t < (periodEnd as Date);
-                      })
-                    : rows.slice(0, 14);
-                  for (const r of considered) {
-                    const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
-                    const m = arr.find((x) => normaliseText(x.text) === key);
-                    if (!m) continue;
-                    if (typeof m.achieved === "number") ach += m.achieved;
-                    if (typeof m.total === "number") tot += m.total;
-                  }
-                  const target = stone.target as number;
-                  const actualPct = tot > 0 ? (ach / tot) * 100 : 0;
-                  const ratio = target > 0 ? actualPct / target : 0;
-                  const barColour =
-                    ratio >= 1 ? "bg-brand-green" : ratio >= 0.85 ? "bg-brand-gold" : "bg-brand-red";
-                  const statusText =
-                    ratio >= 1 ? "text-brand-green" : ratio >= 0.85 ? "text-brand-gold" : "text-brand-red";
-                  const statusLabel =
-                    ratio >= 1 ? "On target" : ratio >= 0.85 ? "Close" : "Behind";
-                  const pctBar = Math.min(100, Math.round((actualPct / Math.max(target, 1)) * 100));
-                  const pctDisplay = tot > 0 ? `${Math.round(actualPct)}%` : "—";
-                  const num = (stone.numerator_label ?? "").trim();
-                  const den = (stone.denominator_label ?? "").trim();
-                  return (
-                    <div key={i}>
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm text-brand-text font-medium break-words">
-                          {stone.text}
-                          <span className="text-brand-muted font-normal"> — rate</span>
-                        </p>
-                        <span className={`text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 ${statusText}`}>
-                          {statusLabel}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden">
-                          <div className={`h-full ${barColour} rounded-full`} style={{ width: `${pctBar}%` }} />
-                        </div>
-                        <span className="text-xs text-brand-muted text-right tabular-nums whitespace-nowrap">
-                          {pctDisplay} / {target}%
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-brand-muted mt-1">
-                        {ach} of {tot} {periodLbl}
-                        {num && den ? ` — ${num} / ${den}` : ""}
-                      </p>
-                    </div>
-                  );
-                }
-
-                if (measurable && isPeriod) {
-                  const now = new Date();
-                  let periodStart: Date;
-                  let periodEnd: Date;
-                  let periodLbl: string;
-                  if (cadence === "month") {
-                    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-                    periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                    periodLbl = "this month";
-                  } else {
-                    const q = Math.floor(now.getMonth() / 3);
-                    periodStart = new Date(now.getFullYear(), q * 3, 1);
-                    periodEnd = new Date(now.getFullYear(), q * 3 + 3, 1);
-                    periodLbl = "this quarter";
                   }
                   const key = normaliseText(stone.text);
                   let total = 0;
