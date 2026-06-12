@@ -250,9 +250,6 @@ function HomePage() {
             <Link to="/progress" className="text-xs text-white/80 hover:text-white">Progress</Link>
             <Link to="/goals" className="text-xs text-white/80 hover:text-white">Goals</Link>
             <Link to="/account" className="text-xs text-white/80 hover:text-white">Account</Link>
-            <button onClick={signOut} className="text-xs text-white/60 hover:text-white" aria-label="Sign out">
-              Sign out
-            </button>
           </nav>
         }
       />

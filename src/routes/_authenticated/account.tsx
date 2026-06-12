@@ -129,18 +129,7 @@ function AccountPage() {
 
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
-      <AppHeader
-        back={{ to: "/" }}
-        rightExtra={
-          <button
-            onClick={signOut}
-            className="text-xs text-white/60 hover:text-white"
-            aria-label="Sign out"
-          >
-            Sign out
-          </button>
-        }
-      />
+      <AppHeader back={{ to: "/" }} />
 
       <div className="mx-auto max-w-xl px-5 pt-6 space-y-6">
         <header>
