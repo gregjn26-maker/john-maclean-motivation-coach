@@ -57,6 +57,21 @@ function AuthPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedEmail = email.trim();
+    if (mode === "forgot") {
+      if (!trimmedEmail) return;
+      setSubmitting(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setSubmitting(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Password reset email sent. Check your inbox.");
+      setMode("signin");
+      return;
+    }
     if (!trimmedEmail || !password) return;
     if (mode === "signup" && !password.trim()) {
       toast.error("Please enter a password.");
