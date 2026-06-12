@@ -236,42 +236,28 @@ function ProgressPage() {
     })();
   }, []);
 
-  // % goals hit (treat partly as half)
-  const rated = rows.filter((r) => r.overall_rating === "hit" || r.overall_rating === "partly" || r.overall_rating === "missed");
-  const pctGoalsHit = rated.length === 0
-    ? 0
-    : Math.round((rated.reduce((acc, r) => acc + ratingScore(r.overall_rating), 0) / rated.length) * 100);
+  // On-pace NOW — % of applicable stones on-pace, judged this moment
+  const now = new Date();
+  const stones = goal?.stones ?? [];
+  const liveResults = stones.map((s) => stoneOnPaceAt(s, rows, goal, now));
+  const liveApplicable = liveResults.filter((r) => r.applicable);
+  const livePct = liveApplicable.length === 0
+    ? null
+    : Math.round((liveApplicable.filter((r) => r.onPace).length / liveApplicable.length) * 100);
 
-  // Last 14 days bar chart — % of stones worked on each day (across all check-ins that day)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days: Array<{ label: string; date: Date; pct: number | null; worked: number; total: number }> = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = dayKey(d);
-    const dayRows = rows.filter((r) => dayKey(new Date(r.created_at)) === key);
-    // Union by stone text: a stone counts as "worked" if any check-in that day marked it worked
-    const stoneMap = new Map<string, boolean>();
-    for (const r of dayRows) {
-      const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
-      for (const s of arr) {
-        const k = normaliseText(s.text);
-        if (!k) continue;
-        stoneMap.set(k, (stoneMap.get(k) ?? false) || !!s.worked);
-      }
-    }
-    const total = stoneMap.size;
-    const worked = Array.from(stoneMap.values()).filter(Boolean).length;
-    const pct = total > 0 ? Math.round((worked / total) * 100) : null;
-    days.push({
-      label: d.toLocaleDateString("en-AU", { weekday: "short" })[0].toUpperCase(),
-      date: d,
-      pct,
-      worked,
-      total,
-    });
-  }
+  // On-pace TREND across the last N check-ins (oldest → newest, left → right)
+  const trendCheckIns = [...rows]
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .slice(-12);
+  const trend = trendCheckIns.map((r) => {
+    const asOf = new Date(r.created_at);
+    const results = stones.map((s) => stoneOnPaceAt(s, rows, goal, asOf));
+    const applicable = results.filter((x) => x.applicable);
+    const pct = applicable.length === 0
+      ? null
+      : Math.round((applicable.filter((x) => x.onPace).length / applicable.length) * 100);
+    return { id: r.id, date: asOf, pct };
+  });
 
   const encouragements = rows
     .filter((r) => r.reply)
@@ -298,39 +284,55 @@ function ProgressPage() {
             <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Check-ins</div>
           </div>
           <div className="rounded-2xl bg-brand-navy text-white p-5">
-            <div className="text-4xl font-bold leading-none">{loading ? "—" : `${pctGoalsHit}%`}</div>
-            <div className="text-xs uppercase tracking-wide mt-2 opacity-90">Goals hit</div>
+            <div className="text-4xl font-bold leading-none">
+              {loading ? "—" : livePct === null ? "—" : `${livePct}%`}
+            </div>
+            <div className="text-xs uppercase tracking-wide mt-2 opacity-90">On pace now</div>
           </div>
         </div>
-        {/* 14-day chart */}
+        {/* On-pace trend across recent check-ins */}
         <section className="rounded-2xl bg-white border border-border p-5">
-          <h2 className="text-sm font-semibold text-brand-navy">Last 14 days</h2>
-          <p className="text-xs text-brand-muted mt-0.5">% of your goal steps worked on each day. Green ≥ 80%, orange ≥ 40%, red below.</p>
-          <div className="mt-4 flex items-end gap-1.5 h-32">
-            {days.map((d, i) => {
-              const hasData = d.pct !== null;
-              const pct = d.pct ?? 0;
-              const h = hasData ? Math.max(pct, 6) : 0;
-              const colour = !hasData
-                ? "bg-brand-bg border border-dashed border-border"
-                : pct >= 80 ? "bg-brand-green"
-                : pct >= 40 ? "bg-brand-orange"
-                : "bg-brand-red";
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1" title={hasData ? `${d.worked}/${d.total} steps · ${pct}%` : "no check-in"}>
-                  <div className="w-full flex items-end h-full">
-                    <div
-                      className={`w-full rounded-md ${colour}`}
-                      style={{ height: `${h || 6}%`, opacity: hasData ? 1 : 0.5 }}
-                    />
+          <h2 className="text-sm font-semibold text-brand-navy">On-pace trend</h2>
+          <p className="text-xs text-brand-muted mt-0.5">
+            % of your goal steps on-pace at each check-in. Green ≥ 80%, orange ≥ 40%, red below.
+          </p>
+          {trend.length === 0 ? (
+            <p className="text-xs text-brand-muted mt-6">No check-ins yet — your trend will appear here once you start checking in.</p>
+          ) : (
+            <div className="mt-4 flex items-end gap-1.5 h-32">
+              {trend.map((t, i) => {
+                const hasData = t.pct !== null;
+                const pct = t.pct ?? 0;
+                const h = hasData ? Math.max(pct, 6) : 6;
+                const colour = !hasData
+                  ? "bg-brand-bg border border-dashed border-border"
+                  : pct >= 80 ? "bg-brand-green"
+                  : pct >= 40 ? "bg-brand-orange"
+                  : "bg-brand-red";
+                const label = t.date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+                return (
+                  <div
+                    key={t.id}
+                    className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0"
+                    title={hasData ? `${label} · ${pct}% on-pace` : `${label} · no judgeable data`}
+                  >
+                    <div className="w-full flex items-end h-full">
+                      <div
+                        className={`w-full rounded-md ${colour}`}
+                        style={{ height: `${h}%`, opacity: hasData ? 1 : 0.5 }}
+                      />
+                    </div>
+                    <div className="text-[9px] text-brand-muted truncate w-full text-center">
+                      {i === 0 || i === trend.length - 1 ? label : ""}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-brand-muted">{d.label}</div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
           </div>
+
 
           <div className="space-y-5 lg:min-w-0">
         {/* Per-stone progress */}
