@@ -47,6 +47,8 @@ function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
 interface GoalData {
   big_goal: string;
   stones: StoneMeta[];
+  target_date: string | null;
+  created_at: string | null;
 }
 
 function normaliseText(s: string) {
@@ -124,7 +126,7 @@ function ProgressPage() {
           .select("id, created_at, overall_rating, reply, stone_statuses", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(200),
-        supabase.from("goals").select("big_goal, stones").maybeSingle(),
+        supabase.from("goals").select("big_goal, stones, target_date, created_at").maybeSingle(),
       ]);
       setLoading(false);
       if (error) return;
@@ -138,6 +140,8 @@ function ProgressPage() {
         setGoal({
           big_goal: goalData.big_goal ?? "",
           stones: Array.isArray(goalData.stones) ? (goalData.stones as unknown as StoneMeta[]) : [],
+          target_date: goalData.target_date ?? null,
+          created_at: goalData.created_at ?? null,
         });
       }
     })();
