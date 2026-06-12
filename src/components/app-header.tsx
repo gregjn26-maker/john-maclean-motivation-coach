@@ -1,5 +1,6 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppHeader({
   rightExtra,
@@ -9,6 +10,11 @@ export function AppHeader({
   back?: { to?: string; label?: string } | boolean;
 }) {
   const router = useRouter();
+  const navigate = useNavigate();
+  async function signOut() {
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  }
   const today = new Date().toLocaleDateString("en-AU", {
     weekday: "short",
     day: "numeric",
@@ -48,6 +54,13 @@ export function AppHeader({
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {rightExtra}
+          <button
+            onClick={signOut}
+            className="text-xs text-white/70 hover:text-white"
+            aria-label="Sign out"
+          >
+            Sign out
+          </button>
           <span className="hidden sm:inline text-xs text-white/60">{today}</span>
         </div>
       </div>
