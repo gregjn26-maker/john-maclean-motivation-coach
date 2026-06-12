@@ -245,20 +245,6 @@ function ProgressPage() {
     ? null
     : Math.round((liveApplicable.filter((r) => r.onPace).length / liveApplicable.length) * 100);
 
-  // On-pace TREND across the last N check-ins (oldest → newest, left → right)
-  const trendCheckIns = [...rows]
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    .slice(-12);
-  const trend = trendCheckIns.map((r) => {
-    const asOf = new Date(r.created_at);
-    const results = stones.map((s) => stoneOnPaceAt(s, rows, goal, asOf));
-    const applicable = results.filter((x) => x.applicable);
-    const pct = applicable.length === 0
-      ? null
-      : Math.round((applicable.filter((x) => x.onPace).length / applicable.length) * 100);
-    return { id: r.id, date: asOf, pct };
-  });
-
   const encouragements = rows
     .filter((r) => r.reply)
     .slice(0, 6)
@@ -290,47 +276,6 @@ function ProgressPage() {
             <div className="text-xs uppercase tracking-wide mt-2 opacity-90">On pace now</div>
           </div>
         </div>
-        {/* On-pace trend across recent check-ins */}
-        <section className="rounded-2xl bg-white border border-border p-5">
-          <h2 className="text-sm font-semibold text-brand-navy">On-pace trend</h2>
-          <p className="text-xs text-brand-muted mt-0.5">
-            % of your goal steps on-pace at each check-in. Green ≥ 80%, orange ≥ 40%, red below.
-          </p>
-          {trend.length === 0 ? (
-            <p className="text-xs text-brand-muted mt-6">No check-ins yet — your trend will appear here once you start checking in.</p>
-          ) : (
-            <div className="mt-4 flex items-end gap-1.5 h-32">
-              {trend.map((t, i) => {
-                const hasData = t.pct !== null;
-                const pct = t.pct ?? 0;
-                const h = hasData ? Math.max(pct, 6) : 6;
-                const colour = !hasData
-                  ? "bg-brand-bg border border-dashed border-border"
-                  : pct >= 80 ? "bg-brand-green"
-                  : pct >= 40 ? "bg-brand-orange"
-                  : "bg-brand-red";
-                const label = t.date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
-                return (
-                  <div
-                    key={t.id}
-                    className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0"
-                    title={hasData ? `${label} · ${pct}% on-pace` : `${label} · no judgeable data`}
-                  >
-                    <div className="w-full flex items-end h-full">
-                      <div
-                        className={`w-full rounded-md ${colour}`}
-                        style={{ height: `${h}%`, opacity: hasData ? 1 : 0.5 }}
-                      />
-                    </div>
-                    <div className="text-[9px] text-brand-muted truncate w-full text-center">
-                      {i === 0 || i === trend.length - 1 ? label : ""}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
           </div>
 
 
