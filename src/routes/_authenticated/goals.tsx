@@ -397,9 +397,9 @@ function GoalsPage() {
                         <p className="text-[11px] text-brand-muted leading-snug">
                           How many, of what, how often? e.g. <span className="font-medium text-brand-text">20 evaluations per month</span>.
                         </p>
-                        <div className="grid grid-cols-[90px_1fr_120px] gap-2">
+                        <div className="grid grid-cols-[100px_1fr_120px] gap-2 items-end">
                           <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Target required</label>
+                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1 whitespace-nowrap">Target</label>
                             <Input
                               type="number"
                               inputMode="numeric"
