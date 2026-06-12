@@ -399,11 +399,12 @@ function GoalsPage() {
                         </p>
                         <div className="grid grid-cols-[90px_1fr_120px] gap-2">
                           <div>
-                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Target</label>
+                            <label className="block text-[10px] font-semibold uppercase tracking-wide text-brand-muted mb-1">Target required</label>
                             <Input
                               type="number"
                               inputMode="numeric"
                               min={1}
+                              required
                               value={s.target}
                               onChange={(e) => updateStone(i, { target: e.target.value })}
                               placeholder="20"
