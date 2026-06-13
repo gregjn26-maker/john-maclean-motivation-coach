@@ -18,7 +18,7 @@ const CheckInInput = z.object({
   overall_rating: z.enum(["", "hit", "partly", "missed"]).default(""),
 });
 
-const PRIMARY_MODEL = "claude-opus-4-7";
+const PRIMARY_MODEL = "claude-opus-4-8";
 const FALLBACK_MODEL = "claude-sonnet-4-6";
 
 interface StoneStatus { text: string; worked: boolean; amount?: number | null; achieved?: number | null; total?: number | null }
