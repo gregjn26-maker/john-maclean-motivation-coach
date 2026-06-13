@@ -450,7 +450,7 @@ function HomePage() {
               className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold"
             >
               {submitting ? "Saving your check-in… John is replying…" : (
-                <span className="inline-flex items-center gap-2">Save check-in <ArrowRight className="h-4 w-4" /></span>
+                <span className="inline-flex items-center gap-2">Save and get John's feedback <ArrowRight className="h-4 w-4" /></span>
               )}
             </Button>
             <p className="text-xs text-brand-muted text-center mt-2">
