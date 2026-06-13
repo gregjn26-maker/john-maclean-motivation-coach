@@ -446,7 +446,11 @@ function ProgressPage() {
                   let periodStart: Date;
                   let periodEnd: Date;
                   let periodLbl: string;
-                  if (cadence === "month") {
+                  if (cadence === "year") {
+                    periodStart = new Date(now.getFullYear(), 0, 1);
+                    periodEnd = new Date(now.getFullYear() + 1, 0, 1);
+                    periodLbl = "this year";
+                  } else if (cadence === "month") {
                     periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
                     periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
                     periodLbl = "this month";
