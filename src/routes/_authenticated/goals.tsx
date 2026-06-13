@@ -238,6 +238,20 @@ function GoalsPage() {
         ) : (
           <form onSubmit={onSubmit} className="space-y-6 text-left">
 
+            {/* Setup explainer */}
+            <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="space-y-3 text-sm text-card-foreground leading-relaxed">
+                <p className="font-semibold text-brand-navy">G&apos;day. Before you start, let me explain how this works — because how you set it up decides how useful it&apos;ll be.</p>
+                <p>Everything here runs on one idea I&apos;ve lived by: a big goal, reached one stone further than yesterday. So we start with your big goal — the thing you&apos;re actually chasing this quarter or this year. Write it plainly. That&apos;s your finish line.</p>
+                <p>Then we break it into stones — the small, trackable steps that get you there. Every stone is one of just two types, and picking the right one is what makes your progress page actually mean something.</p>
+                <p>The first type is a <span className="font-semibold">count-up</span> — a number you build up over a period. &quot;Make 20 calls a week.&quot; &quot;Book 5 demos a week.&quot; &quot;Three training days.&quot; Anything where more is better and you&apos;re stacking them up. Always phrase it as the positive — not &quot;days I didn&apos;t slip,&quot; but &quot;days I trained.&quot; More is always good.</p>
+                <p>The second type is a <span className="font-semibold">level you report</span> — a number that isn&apos;t about adding up, it&apos;s about where you sit right now. &quot;Close rate above 30%.&quot; &quot;Current weight.&quot; &quot;Year-to-date margin.&quot; You&apos;re not counting these up each time; you&apos;re reporting where the dial is. Some you want going up, some down — the app handles that, you just tell it.</p>
+                <p>So as you add each stone, ask yourself: am I counting something up, or reporting where a number sits? Get that right and your progress page tells you the truth at a glance.</p>
+                <p>Then it&apos;s simple: each morning you check in — your wins, your misses, how it went — and you update your stones. That daily honesty is the whole game. Not the grand plan. The check-in.</p>
+                <p>One last thing, and it&apos;s the one that matters most: don&apos;t set this and forget it. I never got out of that wheelchair by writing a goal on a wall and walking away. I got there by turning up every single day and moving the stone a little further. This app only works if you do. So set it up properly now — then show up tomorrow. How far can you go?</p>
+              </div>
+            </section>
+
             {/* Coaching intro */}
             <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}>
               <div className="flex items-start gap-3">
