@@ -156,8 +156,8 @@ function stoneOnPaceAt(
     return { applicable: true, onPace: ratio >= 0.8 };
   }
 
-  if (metric === "count" && typeof stone.target === "number" && stone.target > 0 && stone.cadence) {
-    const cadence = stone.cadence;
+  if (metric === "count" && typeof stone.target === "number" && stone.target > 0 && stonePeriod(stone)) {
+    const cadence = stonePeriod(stone);
     let periodStart: Date, periodEnd: Date;
     if (cadence === "month") {
       periodStart = new Date(asOf.getFullYear(), asOf.getMonth(), 1);
