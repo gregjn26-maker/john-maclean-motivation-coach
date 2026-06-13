@@ -33,6 +33,12 @@ interface StoneMeta {
   text: string;
   target?: number | null;
   unit?: string;
+  // NEW schema
+  type?: "count_up" | "report_level";
+  period?: "day" | "week" | "month" | "quarter" | "year" | "";
+  direction?: "higher_better" | "lower_better";
+  needs_setup?: boolean;
+  // Legacy fields (still read for back-compat)
   cadence?: string;
   metric?: "count" | "rate" | "habit";
   numerator_label?: string;
@@ -40,8 +46,21 @@ interface StoneMeta {
 }
 
 function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
+  // NEW schema wins
+  if (s.type === "report_level") return "rate";
+  if (s.type === "count_up") {
+    return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
+  }
+  // Legacy
   if (s.metric === "count" || s.metric === "rate" || s.metric === "habit") return s.metric;
   return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
+}
+
+function stonePeriod(s: StoneMeta): string {
+  // report_level NEVER carries a period
+  if (s.type === "report_level") return "";
+  if (s.period) return s.period;
+  return s.cadence ?? "";
 }
 
 interface GoalData {
@@ -137,8 +156,8 @@ function stoneOnPaceAt(
     return { applicable: true, onPace: ratio >= 0.8 };
   }
 
-  if (metric === "count" && typeof stone.target === "number" && stone.target > 0 && stone.cadence) {
-    const cadence = stone.cadence;
+  if (metric === "count" && typeof stone.target === "number" && stone.target > 0 && stonePeriod(stone)) {
+    const cadence = stonePeriod(stone);
     let periodStart: Date, periodEnd: Date;
     if (cadence === "month") {
       periodStart = new Date(asOf.getFullYear(), asOf.getMonth(), 1);
@@ -290,99 +309,131 @@ function ProgressPage() {
                 const metric = stoneMetric(stone);
                 const measurable = metric === "count";
                 const unit = (stone.unit ?? "").trim();
-                const cadence = stone.cadence ?? "";
-                const isPeriod = cadence === "day" || cadence === "week" || cadence === "month" || cadence === "quarter";
+                const cadence = stonePeriod(stone);
+                const isPeriod = cadence === "day" || cadence === "week" || cadence === "month" || cadence === "quarter" || cadence === "year";
                 const cadenceLbl =
                   cadence === "week" ? "per wk"
                   : cadence === "month" ? "per mo"
                   : cadence === "quarter" ? "per qtr"
+                  : cadence === "year" ? "per yr"
                   : "per day";
 
-                // RATE metric — cumulative-to-date: show the latest % reading vs the target.
-                // If a target date and goal start date are set, also show pacing (expected % by today).
-                if (metric === "rate" && typeof stone.target === "number" && stone.target > 0) {
+                // NEEDS SETUP — count_up with no target yet
+                if (stone.needs_setup && metric !== "rate") {
+                  return (
+                    <div key={i}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-brand-text font-medium break-words">{stone.text}</p>
+                        <span className="text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 text-brand-muted">
+                          Needs setup
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-brand-muted mt-1">
+                        Add a number target {cadence ? `per ${cadence}` : ""} on your goal so we can track this.
+                      </p>
+                    </div>
+                  );
+                }
+
+                // REPORT_LEVEL — show the LATEST reported value, trend vs previous,
+                // and distance from target. No period, no accumulation. Direction-aware.
+                if (metric === "rate") {
                   const key = normaliseText(stone.text);
-                  // rows are ordered desc, so the first match is the latest reading
-                  let latest: number | null = null;
-                  let latestAt: Date | null = null;
-                  let readings = 0;
+                  const direction = stone.direction ?? "higher_better";
+                  const target = typeof stone.target === "number" ? stone.target : null;
+                  // rows are desc — collect readings newest-first
+                  const readings: { v: number; at: Date }[] = [];
                   for (const r of rows) {
                     const arr = Array.isArray(r.stone_statuses) ? r.stone_statuses : [];
                     const m = arr.find((x) => normaliseText(x.text) === key);
                     if (m && typeof m.achieved === "number") {
-                      readings++;
-                      if (latest === null) {
-                        latest = m.achieved;
-                        latestAt = new Date(r.created_at);
-                      }
+                      readings.push({ v: m.achieved, at: new Date(r.created_at) });
                     }
                   }
-                  const target = stone.target as number;
-                  const current = latest ?? 0;
+                  const latest = readings[0] ?? null;
+                  const prev = readings[1] ?? null;
+                  const unitLbl = unit || "%";
 
-                  // Pacing
-                  let expected: number | null = null;
-                  let elapsedPct = 0;
-                  if (goal?.target_date && goal?.created_at) {
-                    const start = new Date(goal.created_at).getTime();
-                    const end = new Date(goal.target_date).getTime();
-                    const now = Date.now();
-                    if (end > start) {
-                      const e = Math.min(1, Math.max(0, (now - start) / (end - start)));
-                      elapsedPct = e;
-                      expected = target * e;
+                  // Trend
+                  let trendIcon = "";
+                  let trendText = "";
+                  if (latest && prev) {
+                    const delta = latest.v - prev.v;
+                    if (Math.abs(delta) < 0.0001) {
+                      trendIcon = "→";
+                      trendText = "no change";
+                    } else if (delta > 0) {
+                      trendIcon = "↑";
+                      trendText = `up ${Math.abs(delta).toFixed(delta % 1 === 0 ? 0 : 1)}${unitLbl}`;
+                    } else {
+                      trendIcon = "↓";
+                      trendText = `down ${Math.abs(delta).toFixed(delta % 1 === 0 ? 0 : 1)}${unitLbl}`;
                     }
                   }
 
-                  const ratio = expected !== null && expected > 0
-                    ? current / expected
-                    : (target > 0 ? current / target : 0);
-                  const barColour =
-                    ratio >= 1 ? "bg-brand-green" : ratio >= 0.8 ? "bg-brand-gold" : "bg-brand-red";
-                  const statusText =
-                    ratio >= 1 ? "text-brand-green" : ratio >= 0.8 ? "text-brand-gold" : "text-brand-red";
-                  const statusLabel =
-                    expected !== null
-                      ? (ratio >= 1 ? "On pace" : ratio >= 0.8 ? "Close" : "Behind pace")
-                      : (ratio >= 1 ? "On target" : ratio >= 0.8 ? "Close" : "Behind");
-                  const pctBar = Math.min(100, Math.round((current / Math.max(target, 1)) * 100));
-                  const pctDisplay = latest !== null ? `${Math.round(current)}%` : "—";
-                  const latestLbl = latestAt
-                    ? latestAt.toLocaleDateString("en-AU", { day: "numeric", month: "short" })
+                  // Status vs target, honouring direction
+                  let statusText = "text-brand-muted";
+                  let statusLabel = "No reading";
+                  let distanceText = "";
+                  if (latest && target !== null) {
+                    const meetsTarget = direction === "lower_better" ? latest.v <= target : latest.v >= target;
+                    const gap = direction === "lower_better" ? latest.v - target : target - latest.v;
+                    // "Close" band: within 20% of target
+                    const closeBand = Math.max(target * 0.2, 1);
+                    const isClose = !meetsTarget && Math.abs(gap) <= closeBand;
+                    if (meetsTarget) {
+                      statusText = "text-brand-green";
+                      statusLabel = direction === "lower_better" ? "At/under target" : "At/over target";
+                    } else if (isClose) {
+                      statusText = "text-brand-gold";
+                      statusLabel = "Close";
+                    } else {
+                      statusText = "text-brand-red";
+                      statusLabel = direction === "lower_better" ? "Over target" : "Under target";
+                    }
+                    const gapAbs = Math.abs(gap).toFixed(gap % 1 === 0 ? 0 : 1);
+                    distanceText = meetsTarget
+                      ? `${gapAbs}${unitLbl} ${direction === "lower_better" ? "under" : "over"} target`
+                      : `${gapAbs}${unitLbl} ${direction === "lower_better" ? "over" : "under"} target`;
+                  } else if (latest && target === null) {
+                    statusText = "text-brand-muted";
+                    statusLabel = "No target";
+                  }
+
+                  const latestLbl = latest
+                    ? latest.at.toLocaleDateString("en-AU", { day: "numeric", month: "short" })
                     : "";
+                  const latestDisplay = latest
+                    ? `${Number.isInteger(latest.v) ? latest.v : latest.v.toFixed(1)}${unitLbl}`
+                    : "—";
+                  const targetDisplay = target !== null ? `${target}${unitLbl}` : "—";
+
                   return (
                     <div key={i}>
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm text-brand-text font-medium break-words">
                           {stone.text}
-                          <span className="text-brand-muted font-normal"> — % to date</span>
+                          <span className="text-brand-muted font-normal"> — reported level</span>
                         </p>
                         <span className={`text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 ${statusText}`}>
                           {statusLabel}
                         </span>
                       </div>
-                      <div className="mt-1.5 flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-brand-bg rounded-full overflow-hidden relative">
-                          <div className={`h-full ${barColour} rounded-full`} style={{ width: `${pctBar}%` }} />
-                          {expected !== null && (
-                            <div
-                              className="absolute top-[-2px] bottom-[-2px] w-px bg-brand-navy/60"
-                              style={{ left: `${Math.min(100, Math.round((expected / Math.max(target, 1)) * 100))}%` }}
-                              title={`Pace marker: ${Math.round(expected)}%`}
-                            />
-                          )}
-                        </div>
-                        <span className="text-xs text-brand-muted text-right tabular-nums whitespace-nowrap">
-                          {pctDisplay} / {target}%
+                      <div className="mt-1.5 flex items-baseline gap-3">
+                        <span className={`text-2xl font-bold tabular-nums ${statusText}`}>{latestDisplay}</span>
+                        {trendIcon && (
+                          <span className="text-xs text-brand-muted tabular-nums">
+                            {trendIcon} {trendText}
+                          </span>
+                        )}
+                        <span className="ml-auto text-xs text-brand-muted tabular-nums whitespace-nowrap">
+                          target {targetDisplay}
                         </span>
                       </div>
                       <p className="text-[10px] text-brand-muted mt-1">
-                        {latest !== null
-                          ? `latest reading ${latestLbl} — ${readings} update${readings === 1 ? "" : "s"} logged`
-                          : "no readings yet — enter % at your next check-in"}
-                        {expected !== null
-                          ? ` · pace ${Math.round(expected)}% (${Math.round(elapsedPct * 100)}% of timeline elapsed)`
-                          : (goal?.target_date ? "" : " · set a target date on your goal to see pacing")}
+                        {latest
+                          ? `latest reading ${latestLbl}${distanceText ? ` · ${distanceText}` : ""} · ${readings.length} reading${readings.length === 1 ? "" : "s"} logged`
+                          : "no readings yet — enter the current level at your next check-in"}
                       </p>
                     </div>
                   );
@@ -395,7 +446,11 @@ function ProgressPage() {
                   let periodStart: Date;
                   let periodEnd: Date;
                   let periodLbl: string;
-                  if (cadence === "month") {
+                  if (cadence === "year") {
+                    periodStart = new Date(now.getFullYear(), 0, 1);
+                    periodEnd = new Date(now.getFullYear() + 1, 0, 1);
+                    periodLbl = "this year";
+                  } else if (cadence === "month") {
                     periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
                     periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
                     periodLbl = "this month";
