@@ -33,6 +33,12 @@ interface StoneMeta {
   text: string;
   target?: number | null;
   unit?: string;
+  // NEW schema
+  type?: "count_up" | "report_level";
+  period?: "day" | "week" | "month" | "quarter" | "year" | "";
+  direction?: "higher_better" | "lower_better";
+  needs_setup?: boolean;
+  // Legacy fields (still read for back-compat)
   cadence?: string;
   metric?: "count" | "rate" | "habit";
   numerator_label?: string;
@@ -40,8 +46,21 @@ interface StoneMeta {
 }
 
 function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
+  // NEW schema wins
+  if (s.type === "report_level") return "rate";
+  if (s.type === "count_up") {
+    return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
+  }
+  // Legacy
   if (s.metric === "count" || s.metric === "rate" || s.metric === "habit") return s.metric;
   return typeof s.target === "number" && s.target > 0 ? "count" : "habit";
+}
+
+function stonePeriod(s: StoneMeta): string {
+  // report_level NEVER carries a period
+  if (s.type === "report_level") return "";
+  if (s.period && s.period !== "") return s.period;
+  return s.cadence ?? "";
 }
 
 interface GoalData {
