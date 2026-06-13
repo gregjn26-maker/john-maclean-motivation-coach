@@ -59,7 +59,7 @@ function stoneMetric(s: StoneMeta): "count" | "rate" | "habit" {
 function stonePeriod(s: StoneMeta): string {
   // report_level NEVER carries a period
   if (s.type === "report_level") return "";
-  if (s.period && s.period !== "") return s.period;
+  if (s.period) return s.period;
   return s.cadence ?? "";
 }
 
