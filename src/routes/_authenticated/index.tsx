@@ -449,10 +449,13 @@ function HomePage() {
               disabled={submitting}
               className="w-full h-12 text-base bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold"
             >
-              {submitting ? "John is writing back…" : (
-                <span className="inline-flex items-center gap-2">What would John say? <ArrowRight className="h-4 w-4" /></span>
+              {submitting ? "Saving your check-in… John is replying…" : (
+                <span className="inline-flex items-center gap-2">Save check-in <ArrowRight className="h-4 w-4" /></span>
               )}
             </Button>
+            <p className="text-xs text-brand-muted text-center mt-2">
+              Saves your check-in and gets John's reply.
+            </p>
           </form>
         </section>
           </div>
