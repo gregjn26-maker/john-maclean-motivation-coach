@@ -309,13 +309,31 @@ function ProgressPage() {
                 const metric = stoneMetric(stone);
                 const measurable = metric === "count";
                 const unit = (stone.unit ?? "").trim();
-                const cadence = stone.cadence ?? "";
-                const isPeriod = cadence === "day" || cadence === "week" || cadence === "month" || cadence === "quarter";
+                const cadence = stonePeriod(stone);
+                const isPeriod = cadence === "day" || cadence === "week" || cadence === "month" || cadence === "quarter" || cadence === "year";
                 const cadenceLbl =
                   cadence === "week" ? "per wk"
                   : cadence === "month" ? "per mo"
                   : cadence === "quarter" ? "per qtr"
+                  : cadence === "year" ? "per yr"
                   : "per day";
+
+                // NEEDS SETUP — count_up with no target yet
+                if (stone.needs_setup && metric !== "rate") {
+                  return (
+                    <div key={i}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-brand-text font-medium break-words">{stone.text}</p>
+                        <span className="text-[11px] font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5 text-brand-muted">
+                          Needs setup
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-brand-muted mt-1">
+                        Add a number target {cadence ? `per ${cadence}` : ""} on your goal so we can track this.
+                      </p>
+                    </div>
+                  );
+                }
 
                 // RATE metric — cumulative-to-date: show the latest % reading vs the target.
                 // If a target date and goal start date are set, also show pacing (expected % by today).
