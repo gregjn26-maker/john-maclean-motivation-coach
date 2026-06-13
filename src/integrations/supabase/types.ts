@@ -80,6 +80,7 @@ export type Database = {
           created_at: string
           id: string
           stones: Json
+          stones_legacy: Json | null
           target_date: string | null
           updated_at: string
           user_id: string
@@ -89,6 +90,7 @@ export type Database = {
           created_at?: string
           id?: string
           stones?: Json
+          stones_legacy?: Json | null
           target_date?: string | null
           updated_at?: string
           user_id: string
@@ -98,6 +100,7 @@ export type Database = {
           created_at?: string
           id?: string
           stones?: Json
+          stones_legacy?: Json | null
           target_date?: string | null
           updated_at?: string
           user_id?: string
