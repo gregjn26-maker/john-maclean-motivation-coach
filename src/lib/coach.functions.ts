@@ -347,17 +347,20 @@ export const submitCheckIn = createServerFn({ method: "POST" })
 
     const { data: goalRow, error: goalErr } = await supabase
       .from("goals")
-      .select("big_goal, target_date, stones")
+      .select("id, big_goal, target_date, stones, stones_nudge_shown")
       .eq("user_id", userId)
       .maybeSingle();
     if (goalErr) { console.error("[coach] goal load:", goalErr); throw new Error("Could not load your goal."); }
     const bigGoal: BigGoalContext | null = goalRow
       ? {
+          id: goalRow.id,
           big_goal: goalRow.big_goal ?? "",
           target_date: goalRow.target_date ?? null,
           stones: Array.isArray(goalRow.stones) ? (goalRow.stones as unknown as StoneMeta[]) : [],
+          stones_nudge_shown: Boolean((goalRow as { stones_nudge_shown?: boolean }).stones_nudge_shown),
         }
       : null;
+
 
     const { data: profileRow } = await supabase
       .from("profiles")
