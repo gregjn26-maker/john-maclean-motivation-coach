@@ -1,0 +1,1 @@
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS stones_nudge_shown boolean NOT NULL DEFAULT false;

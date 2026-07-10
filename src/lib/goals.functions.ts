@@ -43,6 +43,10 @@ export const saveMyGoal = createServerFn({ method: "POST" })
       big_goal: data.big_goal,
       target_date: data.target_date && data.target_date.length > 0 ? data.target_date : null,
       stones: data.stones,
+      // Any save counts as a material change to the plan — reset the
+      // "add more stones" nudge flag so John may raise it again later
+      // if the plan still looks light.
+      stones_nudge_shown: false,
     };
     const { data: saved, error } = await supabase
       .from("goals")
@@ -52,6 +56,7 @@ export const saveMyGoal = createServerFn({ method: "POST" })
     if (error) { console.error("[goals] save error:", error); throw new Error("Could not save your goal."); }
     return { goal: saved };
   });
+
 
 // -------- Feature 1: John reviews your plan (one-off depth check) --------
 

@@ -49,10 +49,13 @@ interface PastCheckIn {
 }
 
 interface BigGoalContext {
+  id?: string;
   big_goal: string;
   target_date: string | null;
   stones: StoneMeta[];
+  stones_nudge_shown?: boolean;
 }
+
 
 function normaliseText(s: string) {
   return (s || "").trim().toLowerCase();
@@ -123,7 +126,9 @@ function buildUserMessage(
   bigGoal: BigGoalContext | null,
   nudgeCandidate: string | null,
   firstName: string,
+  stonesReminder: "count" | "quality" | null,
 ) {
+
   const nameBlock = firstName
     ? `THIS USER'S FIRST NAME: ${firstName}\nAddress them by their first name naturally — don't overuse it.\n\n---\n\n`
     : "";
@@ -229,8 +234,7 @@ function buildUserMessage(
   const totalReflectionChars = (today.goals + " " + today.wins + " " + today.misses).trim().length;
   const sparseReflection = totalReflectionChars > 0 && totalReflectionChars < 120;
   const stoneCount = bigGoal?.stones?.length ?? 0;
-  // Space out the "add more stones" nudge — only every 3rd check-in when stones < 3
-  const remindMoreStones = stoneCount > 0 && stoneCount < 3 && past.length % 3 === 0;
+
 
   let rules =
     `ACCOUNTABILITY RULES (apply when writing the reply):\n` +
@@ -248,9 +252,12 @@ function buildUserMessage(
     rules += `REFLECTION DEPTH: their written wins/misses/goals are quite short this time. Somewhere in your reply add ONE short, positive line — no scolding — inviting them to give you more detail next time: how it felt, the specifics, the numbers. Frame it as "the more you give me, the more I can give you back," and tie it back to the idea that the small details are the stones that add up.\n\n`;
   }
 
-  if (remindMoreStones) {
-    rules += `STONES REMINDER: their saved plan only has ${stoneCount} stone${stoneCount === 1 ? "" : "s"}. Weave in ONE gentle, short line (not the closing challenge) in your voice — a big goal is built from many small stones, and it's worth them adding a few more small steps to their plan. Do not nag or repeat it; just plant the thought.\n\n`;
+  if (stonesReminder === "count") {
+    rules += `STONES REMINDER: their saved plan only has ${stoneCount} stone${stoneCount === 1 ? "" : "s"}. Weave in ONE gentle, short line (not the closing challenge) in your voice — a big goal is built from many small stones, and it's worth them adding a few more small steps to their plan. Do not nag; just plant the thought. This is the ONLY time you'll raise this for this plan, so make it count.\n\n`;
+  } else if (stonesReminder === "quality") {
+    rules += `STONES REMINDER (depth): they have ${stoneCount} stones but the plan looks a bit light on measurable, concrete steps for a goal this size. Weave in ONE short, encouraging line (not the closing challenge) in your voice — suggest they think about adding a couple more specific, measurable stones (with a number, a frequency, or a clear yes/no) so the plan really carries the weight of the goal. Do not nag; just plant the thought. This is the ONLY time you'll raise this for this plan.\n\n`;
   }
+
 
   if (nudgeCandidate) {
     rules += `THIS CHECK-IN'S NUDGE TARGET: "${nudgeCandidate}". End your reply with one short, sharp closing challenge that points the user back to this step — one stone further than last time. Do not mention any other neglected step.\n\n`;
@@ -340,17 +347,20 @@ export const submitCheckIn = createServerFn({ method: "POST" })
 
     const { data: goalRow, error: goalErr } = await supabase
       .from("goals")
-      .select("big_goal, target_date, stones")
+      .select("id, big_goal, target_date, stones, stones_nudge_shown")
       .eq("user_id", userId)
       .maybeSingle();
     if (goalErr) { console.error("[coach] goal load:", goalErr); throw new Error("Could not load your goal."); }
     const bigGoal: BigGoalContext | null = goalRow
       ? {
+          id: goalRow.id,
           big_goal: goalRow.big_goal ?? "",
           target_date: goalRow.target_date ?? null,
           stones: Array.isArray(goalRow.stones) ? (goalRow.stones as unknown as StoneMeta[]) : [],
+          stones_nudge_shown: Boolean((goalRow as { stones_nudge_shown?: boolean }).stones_nudge_shown),
         }
       : null;
+
 
     const { data: profileRow } = await supabase
       .from("profiles")
@@ -385,7 +395,27 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       nudgeCandidate = scored[0]?.text ?? null;
     }
 
-    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate, firstName);
+    // Two-tier stones reminder — at most ONCE per goal.
+    // <3 stones → count-based nudge; 3–5 stones → only if the plan looks
+    // light on measurable depth; 6+ → never. Skip entirely if already shown
+    // for this goal (flag is reset when the user re-saves their plan).
+    let stonesReminder: "count" | "quality" | null = null;
+    if (bigGoal && !bigGoal.stones_nudge_shown && bigGoal.stones.length > 0) {
+      const n = bigGoal.stones.length;
+      if (n < 3) {
+        stonesReminder = "count";
+      } else if (n <= 5) {
+        const measurable = bigGoal.stones.filter((s) => {
+          const m = getMetric(s);
+          return (m === "count" || m === "rate") && typeof s.target === "number" && s.target > 0;
+        }).length;
+        const avgLen = bigGoal.stones.reduce((a, s) => a + (s.text?.length ?? 0), 0) / n;
+        if (measurable < 2 || avgLen < 25) stonesReminder = "quality";
+      }
+    }
+
+    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate, firstName, stonesReminder);
+
 
 
     let reply: string;
@@ -412,5 +442,16 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .single();
     if (insertErr) { console.error("[coach] save check-in:", insertErr); throw new Error("Could not save your check-in."); }
 
+    // Mark the "add more stones" nudge as shown so it won't fire again for
+    // this plan. Resets automatically when the user re-saves their goal.
+    if (stonesReminder && bigGoal?.id) {
+      const { error: flagErr } = await supabase
+        .from("goals")
+        .update({ stones_nudge_shown: true })
+        .eq("id", bigGoal.id);
+      if (flagErr) console.error("[coach] set stones_nudge_shown:", flagErr);
+    }
+
     return { checkIn: inserted, reply };
+
   });
