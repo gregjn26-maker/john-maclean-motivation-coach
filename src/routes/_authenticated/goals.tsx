@@ -198,6 +198,7 @@ function GoalsPage() {
       .filter((x): x is CleanedStone => x !== null);
     if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
+    setReviewMsg(null);
     try {
       await persistName({ data: { first_name: firstName.trim(), last_name: lastName.trim() } });
       await save({
@@ -208,13 +209,38 @@ function GoalsPage() {
         },
       });
       toast.success("Saved.");
-      navigate({ to: "/" });
+      // Feature 1: John reviews the plan (never blocks save)
+      setReviewing(true);
+      try {
+        const res = await review({
+          data: {
+            big_goal: bigGoal.trim(),
+            target_date: targetDate || null,
+            stones: cleanedStones,
+          },
+        });
+        if (res.light && res.message) {
+          setReviewMsg(res.message);
+          // Scroll the review card into view shortly after render
+          setTimeout(() => {
+            document.getElementById("john-review-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 50);
+        } else {
+          navigate({ to: "/" });
+        }
+      } catch {
+        // Silent — save already succeeded
+        navigate({ to: "/" });
+      } finally {
+        setReviewing(false);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save.");
     } finally {
       setSaving(false);
     }
   }
+
 
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
