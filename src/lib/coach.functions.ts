@@ -395,7 +395,27 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       nudgeCandidate = scored[0]?.text ?? null;
     }
 
-    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate, firstName);
+    // Two-tier stones reminder — at most ONCE per goal.
+    // <3 stones → count-based nudge; 3–5 stones → only if the plan looks
+    // light on measurable depth; 6+ → never. Skip entirely if already shown
+    // for this goal (flag is reset when the user re-saves their plan).
+    let stonesReminder: "count" | "quality" | null = null;
+    if (bigGoal && !bigGoal.stones_nudge_shown && bigGoal.stones.length > 0) {
+      const n = bigGoal.stones.length;
+      if (n < 3) {
+        stonesReminder = "count";
+      } else if (n <= 5) {
+        const measurable = bigGoal.stones.filter((s) => {
+          const m = getMetric(s);
+          return (m === "count" || m === "rate") && typeof s.target === "number" && s.target > 0;
+        }).length;
+        const avgLen = bigGoal.stones.reduce((a, s) => a + (s.text?.length ?? 0), 0) / n;
+        if (measurable < 2 || avgLen < 25) stonesReminder = "quality";
+      }
+    }
+
+    const userMessage = buildUserMessage(data, past, bigGoal, nudgeCandidate, firstName, stonesReminder);
+
 
 
     let reply: string;
