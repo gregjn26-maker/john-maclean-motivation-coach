@@ -126,7 +126,9 @@ function buildUserMessage(
   bigGoal: BigGoalContext | null,
   nudgeCandidate: string | null,
   firstName: string,
+  stonesReminder: "count" | "quality" | null,
 ) {
+
   const nameBlock = firstName
     ? `THIS USER'S FIRST NAME: ${firstName}\nAddress them by their first name naturally — don't overuse it.\n\n---\n\n`
     : "";
