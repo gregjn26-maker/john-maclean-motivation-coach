@@ -371,7 +371,8 @@ function GoalsPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+            <section id="stones-section" ref={stonesRef} className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+
               <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
                 <h2 className="text-base font-semibold text-brand-navy">Your stones</h2>
                 <p className="text-xs text-brand-muted mt-0.5">
