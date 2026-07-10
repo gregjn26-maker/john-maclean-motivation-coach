@@ -49,10 +49,13 @@ interface PastCheckIn {
 }
 
 interface BigGoalContext {
+  id?: string;
   big_goal: string;
   target_date: string | null;
   stones: StoneMeta[];
+  stones_nudge_shown?: boolean;
 }
+
 
 function normaliseText(s: string) {
   return (s || "").trim().toLowerCase();
