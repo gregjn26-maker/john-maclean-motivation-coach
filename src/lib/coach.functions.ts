@@ -234,8 +234,7 @@ function buildUserMessage(
   const totalReflectionChars = (today.goals + " " + today.wins + " " + today.misses).trim().length;
   const sparseReflection = totalReflectionChars > 0 && totalReflectionChars < 120;
   const stoneCount = bigGoal?.stones?.length ?? 0;
-  // Space out the "add more stones" nudge — only every 3rd check-in when stones < 3
-  const remindMoreStones = stoneCount > 0 && stoneCount < 3 && past.length % 3 === 0;
+
 
   let rules =
     `ACCOUNTABILITY RULES (apply when writing the reply):\n` +
