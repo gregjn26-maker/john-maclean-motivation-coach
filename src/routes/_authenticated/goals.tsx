@@ -59,6 +59,7 @@ function GoalsPage() {
   const navigate = useNavigate();
   const fetchGoal = useServerFn(getMyGoal);
   const save = useServerFn(saveMyGoal);
+  const review = useServerFn(reviewMyPlan);
   const fetchProfile = useServerFn(getMyProfile);
   const persistName = useServerFn(saveMyName);
 
@@ -69,6 +70,10 @@ function GoalsPage() {
   const [stones, setStones] = useState<StoneForm[]>([emptyStone()]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const stonesRef = useRef<HTMLElement | null>(null);
+
 
   useEffect(() => {
     Promise.all([
