@@ -402,6 +402,9 @@ function HomePage() {
         {/* Check-in form */}
         <section className="rounded-2xl bg-white border border-border p-5">
           <form onSubmit={onSubmit} className="space-y-5">
+            <p className="text-xs text-brand-muted leading-snug -mb-2">
+              The more detail you give me — how it felt, the specifics, the numbers — the more useful my coaching gets. Little details are the stones that add up.
+            </p>
             <div className="space-y-1.5">
               <Label className="text-sm text-brand-text">Since your last check-in</Label>
               <Textarea
@@ -417,7 +420,7 @@ function HomePage() {
               <Label className="text-sm font-semibold text-brand-green">Wins</Label>
               <Textarea
                 rows={3}
-                placeholder="What went well? Even the small stuff."
+                placeholder="What went well? Even the small stuff — the specifics help."
                 value={wins}
                 onChange={(e) => setWins(e.target.value)}
                 className="text-base resize-none border-2 border-brand-green/40 focus-visible:border-brand-green focus-visible:ring-0"
@@ -428,12 +431,13 @@ function HomePage() {
               <Label className="text-sm font-semibold text-brand-red">Misses / obstacles</Label>
               <Textarea
                 rows={3}
-                placeholder="What didn't land? What got in the way?"
+                placeholder="What didn't land? What got in the way? Context matters."
                 value={misses}
                 onChange={(e) => setMisses(e.target.value)}
                 className="text-base resize-none border-2 border-brand-red/40 focus-visible:border-brand-red focus-visible:ring-0"
               />
             </div>
+
 
             <div className="space-y-2">
               <Label className="text-sm text-brand-text">How did it go overall?</Label>

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyGoal, saveMyGoal } from "@/lib/goals.functions";
+import { getMyGoal, saveMyGoal, reviewMyPlan } from "@/lib/goals.functions";
 import { getMyProfile, saveMyName } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Play, Plus, X } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
+
 
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
@@ -58,6 +59,7 @@ function GoalsPage() {
   const navigate = useNavigate();
   const fetchGoal = useServerFn(getMyGoal);
   const save = useServerFn(saveMyGoal);
+  const review = useServerFn(reviewMyPlan);
   const fetchProfile = useServerFn(getMyProfile);
   const persistName = useServerFn(saveMyName);
 
@@ -68,6 +70,10 @@ function GoalsPage() {
   const [stones, setStones] = useState<StoneForm[]>([emptyStone()]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const stonesRef = useRef<HTMLElement | null>(null);
+
 
   useEffect(() => {
     Promise.all([
@@ -192,6 +198,7 @@ function GoalsPage() {
       .filter((x): x is CleanedStone => x !== null);
     if (!firstName.trim()) return toast.error("Please add your first name before saving.", { duration: 6000 });
     setSaving(true);
+    setReviewMsg(null);
     try {
       await persistName({ data: { first_name: firstName.trim(), last_name: lastName.trim() } });
       await save({
@@ -202,13 +209,38 @@ function GoalsPage() {
         },
       });
       toast.success("Saved.");
-      navigate({ to: "/" });
+      // Feature 1: John reviews the plan (never blocks save)
+      setReviewing(true);
+      try {
+        const res = await review({
+          data: {
+            big_goal: bigGoal.trim(),
+            target_date: targetDate || null,
+            stones: cleanedStones,
+          },
+        });
+        if (res.light && res.message) {
+          setReviewMsg(res.message);
+          // Scroll the review card into view shortly after render
+          setTimeout(() => {
+            document.getElementById("john-review-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 50);
+        } else {
+          navigate({ to: "/" });
+        }
+      } catch {
+        // Silent — save already succeeded
+        navigate({ to: "/" });
+      } finally {
+        setReviewing(false);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save.");
     } finally {
       setSaving(false);
     }
   }
+
 
   return (
     <main className="min-h-screen bg-brand-bg pb-24">
@@ -339,7 +371,8 @@ function GoalsPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+            <section id="stones-section" ref={stonesRef} className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+
               <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
                 <h2 className="text-base font-semibold text-brand-navy">Your stones</h2>
                 <p className="text-xs text-brand-muted mt-0.5">
@@ -494,12 +527,52 @@ function GoalsPage() {
 
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || reviewing}
               className="w-full h-12 text-base font-semibold text-white hover:opacity-90"
               style={{ backgroundColor: "#FF6B35" }}
             >
-              {saving ? "Saving…" : "Save goal"}
+              {saving ? "Saving…" : reviewing ? "Saved. John's taking a look…" : "Save goal"}
             </Button>
+
+            {reviewMsg && (
+              <section
+                id="john-review-card"
+                className="rounded-xl p-5 space-y-3 shadow-sm"
+                style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}
+              >
+                <div className="flex items-start gap-3">
+                  <JMAvatar />
+                  <div className="space-y-2 text-sm text-coach-panel-foreground leading-relaxed flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-brand-navy uppercase tracking-wide">John's take on your plan</div>
+                    <p className="whitespace-pre-wrap">{reviewMsg}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setReviewMsg(null);
+                      document.getElementById("stones-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="flex-1 bg-brand-navy text-white hover:opacity-90"
+                  >
+                    Add more stones
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setReviewMsg(null);
+                      navigate({ to: "/" });
+                    }}
+                    className="flex-1"
+                  >
+                    Keep it as is
+                  </Button>
+                </div>
+              </section>
+            )}
+
           </form>
         )}
       </div>

@@ -226,6 +226,12 @@ function buildUserMessage(
     memory += "---\n\n";
   }
 
+  const totalReflectionChars = (today.goals + " " + today.wins + " " + today.misses).trim().length;
+  const sparseReflection = totalReflectionChars > 0 && totalReflectionChars < 120;
+  const stoneCount = bigGoal?.stones?.length ?? 0;
+  // Space out the "add more stones" nudge — only every 3rd check-in when stones < 3
+  const remindMoreStones = stoneCount > 0 && stoneCount < 3 && past.length % 3 === 0;
+
   let rules =
     `ACCOUNTABILITY RULES (apply when writing the reply):\n` +
     `- Celebrate first. Lead with the wins. Respond to the misses in your real voice, with a relevant true story.\n` +
@@ -237,6 +243,14 @@ function buildUserMessage(
     `- Do NOT assume the user's last check-in was yesterday. Say "last time" or "since we last spoke" rather than "yesterday".\n` +
     `- Do NOT pressure them to check in daily. This is their check-in, not a daily streak.\n` +
     `- Use Australian English.\n\n`;
+
+  if (sparseReflection) {
+    rules += `REFLECTION DEPTH: their written wins/misses/goals are quite short this time. Somewhere in your reply add ONE short, positive line — no scolding — inviting them to give you more detail next time: how it felt, the specifics, the numbers. Frame it as "the more you give me, the more I can give you back," and tie it back to the idea that the small details are the stones that add up.\n\n`;
+  }
+
+  if (remindMoreStones) {
+    rules += `STONES REMINDER: their saved plan only has ${stoneCount} stone${stoneCount === 1 ? "" : "s"}. Weave in ONE gentle, short line (not the closing challenge) in your voice — a big goal is built from many small stones, and it's worth them adding a few more small steps to their plan. Do not nag or repeat it; just plant the thought.\n\n`;
+  }
 
   if (nudgeCandidate) {
     rules += `THIS CHECK-IN'S NUDGE TARGET: "${nudgeCandidate}". End your reply with one short, sharp closing challenge that points the user back to this step — one stone further than last time. Do not mention any other neglected step.\n\n`;
