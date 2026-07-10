@@ -442,5 +442,16 @@ export const submitCheckIn = createServerFn({ method: "POST" })
       .single();
     if (insertErr) { console.error("[coach] save check-in:", insertErr); throw new Error("Could not save your check-in."); }
 
+    // Mark the "add more stones" nudge as shown so it won't fire again for
+    // this plan. Resets automatically when the user re-saves their goal.
+    if (stonesReminder && bigGoal?.id) {
+      const { error: flagErr } = await supabase
+        .from("goals")
+        .update({ stones_nudge_shown: true })
+        .eq("id", bigGoal.id);
+      if (flagErr) console.error("[coach] set stones_nudge_shown:", flagErr);
+    }
+
     return { checkIn: inserted, reply };
+
   });
