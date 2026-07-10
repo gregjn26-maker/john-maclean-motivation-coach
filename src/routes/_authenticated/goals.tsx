@@ -527,12 +527,52 @@ function GoalsPage() {
 
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || reviewing}
               className="w-full h-12 text-base font-semibold text-white hover:opacity-90"
               style={{ backgroundColor: "#FF6B35" }}
             >
-              {saving ? "Saving…" : "Save goal"}
+              {saving ? "Saving…" : reviewing ? "Saved. John's taking a look…" : "Save goal"}
             </Button>
+
+            {reviewMsg && (
+              <section
+                id="john-review-card"
+                className="rounded-xl p-5 space-y-3 shadow-sm"
+                style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}
+              >
+                <div className="flex items-start gap-3">
+                  <JMAvatar />
+                  <div className="space-y-2 text-sm text-coach-panel-foreground leading-relaxed flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-brand-navy uppercase tracking-wide">John's take on your plan</div>
+                    <p className="whitespace-pre-wrap">{reviewMsg}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setReviewMsg(null);
+                      document.getElementById("stones-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="flex-1 bg-brand-navy text-white hover:opacity-90"
+                  >
+                    Add more stones
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setReviewMsg(null);
+                      navigate({ to: "/" });
+                    }}
+                    className="flex-1"
+                  >
+                    Keep it as is
+                  </Button>
+                </div>
+              </section>
+            )}
+
           </form>
         )}
       </div>
