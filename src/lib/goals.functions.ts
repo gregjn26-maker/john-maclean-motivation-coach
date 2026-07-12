@@ -109,6 +109,11 @@ export const reviewMyPlan = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
+    // Hard cap: if the plan already has 6+ stones, skip the review entirely.
+    if ((data.stones ?? []).length >= 6) {
+      return { light: false, message: null };
+    }
+
     // Fallback path shared with error branch
     const buildFallback = (): { light: boolean; message: string | null } => {
       if ((data.stones ?? []).length < 3) {
