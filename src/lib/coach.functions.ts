@@ -319,7 +319,8 @@ export const submitCheckIn = createServerFn({ method: "POST" })
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
-    const { data: settingRow, error: settingErr } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: settingRow, error: settingErr } = await supabaseAdmin
       .from("app_settings")
       .select("value")
       .eq("key", "coach_system_prompt")
