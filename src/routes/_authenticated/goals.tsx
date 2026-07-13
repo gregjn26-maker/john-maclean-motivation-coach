@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyGoal, saveMyGoal, reviewMyPlan } from "@/lib/goals.functions";
+import { getMyGoal, saveMyGoal, reviewMyPlan, suggestGoalPlan } from "@/lib/goals.functions";
 import { getMyProfile, saveMyName } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Play, Plus, X } from "lucide-react";
+import { Play, Plus, X, Sparkles } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 
 
