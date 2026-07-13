@@ -649,6 +649,197 @@ function GoalsPage() {
           </form>
         )}
       </div>
+
+      {/* Feature 3: "Help me set this goal" — modal */}
+      <Dialog open={suggestOpen} onOpenChange={(open) => { if (!suggesting) setSuggestOpen(open); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-brand-navy">
+              {suggestion ? "John's take" : "Talk it through with John"}
+            </DialogTitle>
+            <DialogDescription>
+              {suggestion
+                ? "Have a look — apply what's useful, ignore what's not. You still edit and save your own plan."
+                : "Tell John what you're aiming at and a bit about your role. He'll suggest a big goal and a few measurable stones."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!suggestion && (
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1.5">
+                <Label className="text-sm">What do you want to achieve?</Label>
+                <Textarea
+                  rows={3}
+                  value={suggestIntent}
+                  onChange={(e) => setSuggestIntent(e.target.value)}
+                  placeholder="e.g. Grow my consulting revenue to $250k next year."
+                  className="text-base resize-none"
+                  maxLength={2000}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Your role / context <span className="text-muted-foreground">(optional)</span></Label>
+                <Input
+                  value={suggestRole}
+                  onChange={(e) => setSuggestRole(e.target.value)}
+                  placeholder="e.g. Solo B2B consultant, 8 years in"
+                  className="text-base h-11"
+                  maxLength={500}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Anything else John should know? <span className="text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  rows={2}
+                  value={suggestContext}
+                  onChange={(e) => setSuggestContext(e.target.value)}
+                  placeholder="e.g. I struggle to measure the right things — I know I need to prospect more."
+                  className="text-base resize-none"
+                  maxLength={2000}
+                />
+              </div>
+            </div>
+          )}
+
+          {suggestion && (
+            <div className="space-y-3 pt-1">
+              {suggestion.note && (
+                <div
+                  className="rounded-lg p-3 text-sm leading-relaxed text-coach-panel-foreground"
+                  style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}
+                >
+                  <div className="text-xs font-semibold text-brand-navy uppercase tracking-wide mb-1">John</div>
+                  <p className="whitespace-pre-wrap">{suggestion.note}</p>
+                </div>
+              )}
+              {suggestion.suggestedBigGoal && (
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-brand-muted">Suggested big goal</div>
+                  <p className="text-sm text-brand-text mt-1">{suggestion.suggestedBigGoal}</p>
+                  {suggestion.suggestedTargetDate && (
+                    <p className="text-xs text-brand-muted mt-0.5">Target: {suggestion.suggestedTargetDate}</p>
+                  )}
+                </div>
+              )}
+              {suggestion.suggestedStones.length > 0 && (
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-brand-muted mb-2">Suggested stones</div>
+                  <ul className="space-y-1.5">
+                    {suggestion.suggestedStones.map((s, i) => (
+                      <li key={i} className="text-sm text-brand-text">
+                        <span className="font-medium">{s.text}</span>
+                        <span className="text-xs text-brand-muted ml-2">
+                          [{s.metric}
+                          {s.target !== null ? `, target ${s.target}${s.unit ? " " + s.unit : ""}` : ""}
+                          {s.cadence ? ` per ${s.cadence}` : ""}]
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            {!suggestion && (
+              <>
+                <Button type="button" variant="outline" onClick={() => setSuggestOpen(false)} disabled={suggesting}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={suggesting || suggestIntent.trim().length < 3}
+                  onClick={async () => {
+                    setSuggesting(true);
+                    try {
+                      const cleanedExisting = stones
+                        .filter((s) => s.text.trim().length > 0)
+                        .map((s) => {
+                          const n = Number(s.target);
+                          const hasTarget = Number.isFinite(n) && n > 0;
+                          return {
+                            text: s.text.trim(),
+                            metric: s.metric,
+                            target: hasTarget ? n : null,
+                            unit: s.unit.trim().slice(0, 40),
+                            cadence: s.metric === "habit" ? ("" as const) : s.cadence,
+                            numerator_label: s.numerator_label,
+                            denominator_label: s.denominator_label,
+                          };
+                        });
+                      const res = await suggest({
+                        data: {
+                          intent: suggestIntent.trim(),
+                          role: suggestRole.trim(),
+                          context: suggestContext.trim(),
+                          existingBigGoal: bigGoal.trim(),
+                          existingStones: cleanedExisting,
+                        },
+                      });
+                      setSuggestion(res);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Couldn't reach John.");
+                    } finally {
+                      setSuggesting(false);
+                    }
+                  }}
+                  className="bg-brand-orange text-white hover:opacity-90"
+                >
+                  {suggesting ? "John's thinking…" : "Ask John"}
+                </Button>
+              </>
+            )}
+            {suggestion && (
+              <>
+                <Button type="button" variant="outline" onClick={() => { setSuggestion(null); }}>
+                  Ask again
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    // Apply into the form. Does NOT save.
+                    if (suggestion.suggestedBigGoal && !bigGoal.trim()) {
+                      setBigGoal(suggestion.suggestedBigGoal);
+                    } else if (suggestion.suggestedBigGoal) {
+                      setBigGoal(suggestion.suggestedBigGoal);
+                    }
+                    if (suggestion.suggestedTargetDate && !targetDate) {
+                      setTargetDate(suggestion.suggestedTargetDate);
+                    }
+                    if (suggestion.suggestedStones.length > 0) {
+                      const applied: StoneForm[] = suggestion.suggestedStones.map((s) => ({
+                        text: s.text,
+                        metric: s.metric,
+                        target: s.target !== null ? String(s.target) : "",
+                        unit: s.unit,
+                        cadence: (s.cadence === "" ? "day" : s.cadence) as Cadence,
+                        numerator_label: "",
+                        denominator_label: "",
+                      }));
+                      const existingFilled = stones.filter((s) => s.text.trim().length > 0);
+                      setStones(existingFilled.length > 0 ? [...existingFilled, ...applied] : applied);
+                    }
+                    setSuggestOpen(false);
+                    setSuggestion(null);
+                    setSuggestIntent("");
+                    setSuggestRole("");
+                    setSuggestContext("");
+                    toast.success("Added to your plan. Tweak and Save when you're happy.");
+                    setTimeout(() => {
+                      document.getElementById("stones-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
+                  className="bg-brand-orange text-white hover:opacity-90"
+                >
+                  Apply to my plan
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
+
