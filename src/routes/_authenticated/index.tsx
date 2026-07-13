@@ -406,10 +406,10 @@ function HomePage() {
               The more detail you give me — how it felt, the specifics, the numbers — the more useful my coaching gets. Little details are the stones that add up.
             </p>
             <div className="space-y-1.5">
-              <Label className="text-sm text-brand-text">Apart from your stones, what else have you been working on that's helping you get there?</Label>
+              <Label className="text-sm text-brand-text">Anything else you're doing towards this goal — or want John's take on how you're measuring it?</Label>
               <Textarea
                 rows={2}
-                placeholder="Other things you've done that are moving you closer — even small stuff that isn't on your stone list."
+                placeholder="Other efforts, or ask John about your stones, targets, or how to measure progress."
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
                 className="text-base resize-none border-border focus-visible:ring-brand-orange"
