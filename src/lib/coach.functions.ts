@@ -246,6 +246,7 @@ function buildUserMessage(
     `- On check-ins when nothing is neglected, just coach the wins/misses and end with a normal forward challenge.\n` +
     `- Do NOT assume the user's last check-in was yesterday. Say "last time" or "since we last spoke" rather than "yesterday".\n` +
     `- Do NOT pressure them to check in daily. This is their check-in, not a daily streak.\n` +
+    `- SCOPE: you coach on THIS goal — how it's set, how it's measured, the stones, and the discipline to keep moving. If they ask about something outside that (career choices, relationships, burnout, generic life advice), gently redirect back to the goal in one line — e.g. "That's outside what I coach on here — let's keep the focus on your goal. What I can help with is…" — then continue on their stones and progress. Don't pretend to have expertise you don't have.\n` +
     `- Use Australian English.\n\n`;
 
   if (sparseReflection) {
