@@ -151,19 +151,19 @@ export const reviewMyPlan = createServerFn({ method: "POST" })
     }).join("\n");
 
     const userMessage =
-      `You are reviewing a user's newly-saved plan for depth and specificity. This is a ONE-OFF review at goal-setting, not a check-in.\n\n` +
+      `You are reviewing a user's newly-saved plan for depth, specificity and measurability. This is a ONE-OFF review at goal-setting, not a check-in.\n\n` +
       `THEIR BIG GOAL: ${data.big_goal || "(not set)"}\n` +
       `TARGET DATE: ${data.target_date || "(not set)"}\n` +
       `THEIR STONES (${(data.stones ?? []).length}):\n${stoneLines || "(none)"}\n\n` +
-      `Assess whether the plan has enough depth to realistically reach the big goal by the target date. Consider:\n` +
-      `- Are there enough stones (a big goal usually needs many small steps)?\n` +
-      `- Is each stone specific and measurable?\n` +
-      `- Do they cover the different areas this goal actually needs?\n` +
-      `- Are they substantial enough overall?\n\n` +
+      `Assess the plan across these dimensions:\n` +
+      `1. GOAL CLARITY — is the big goal specific and time-bound, or vague? (e.g. "grow the business" vs "hit $1.2M new revenue by Dec").\n` +
+      `2. STONE QUALITY — is each stone measurable? Is the target realistic for the chosen cadence? Is the unit sensible? Any that are actually outcomes disguised as stones (things you can't directly do daily/weekly)?\n` +
+      `3. COVERAGE — do the stones plausibly add up to the big goal, or are there obvious gaps (e.g. a sales goal with no prospecting stone; a fitness goal with only nutrition)?\n` +
+      `4. BALANCE — is it all yes/no habits with no counts (hard to see progress) or all counts with no supporting habit? A mix usually holds up better.\n\n` +
       `Reply with ONE JSON object and nothing else, in this shape:\n` +
       `{"light": true|false, "message": "..."}\n\n` +
-      `- "light": true if the plan looks a bit thin and would benefit from more stones or more specificity; false if it looks solid.\n` +
-      `- If light=true: "message" is a warm, direct note in YOUR voice (John Maclean). Acknowledge what's already good, gently note it looks a little light, remind them a big goal is reached one stone at a time, and name 1–3 concrete example stones or areas they could add for THIS specific goal. Keep it under 130 words. Use Australian English. Draw on your own story only where natural — don't fabricate details.\n` +
+      `- "light": true if the plan would benefit from sharpening on ANY of the four dimensions above; false if it looks solid.\n` +
+      `- If light=true: "message" is a warm, direct note in YOUR voice (John Maclean). Acknowledge what's already good, then name the 1–2 most useful, concrete suggestions for THIS specific goal — be specific: name a missing stone, a target to add, a unit to tighten, a stone to make measurable. Don't list everything, pick what matters most. Remind them a big goal is reached one stone at a time. Keep it under 150 words. Use Australian English. Draw on your own story only where natural — don't fabricate details.\n` +
       `- If light=false: "message" can be an empty string or one short affirming line in your voice. Do not nag.\n\n` +
       `Return the JSON object only. No preamble, no code fences.`;
 
@@ -182,4 +182,134 @@ export const reviewMyPlan = createServerFn({ method: "POST" })
     if (!parsed || typeof parsed.light !== "boolean") return buildFallback();
     const message = (parsed.message ?? "").trim();
     return { light: parsed.light, message: parsed.light ? (message || buildFallback().message) : (message || null) };
+  });
+
+
+// -------- Feature 3: "Help me set this goal" — John suggests a plan --------
+
+const SuggestInput = z.object({
+  intent: z.string().trim().min(1).max(2000),
+  role: z.string().trim().max(500).optional().default(""),
+  context: z.string().trim().max(2000).optional().default(""),
+  existingBigGoal: z.string().trim().max(500).optional().default(""),
+  existingStones: z.array(StoneSchema).max(1000).optional().default([]),
+});
+
+type SuggestedStone = {
+  text: string;
+  metric: "count" | "rate" | "habit";
+  target: number | null;
+  unit: string;
+  cadence: "day" | "week" | "month" | "quarter" | "";
+};
+
+function extractSuggestion(raw: string): {
+  suggestedBigGoal?: string;
+  suggestedTargetDate?: string | null;
+  suggestedStones?: SuggestedStone[];
+  note?: string;
+} | null {
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
+export const suggestGoalPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => SuggestInput.parse(input))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return {
+        suggestedBigGoal: "",
+        suggestedTargetDate: null as string | null,
+        suggestedStones: [] as SuggestedStone[],
+        note: "John's not available to chat right now — try again in a minute.",
+      };
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: settingRow } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "coach_system_prompt")
+      .maybeSingle();
+    const systemPrompt = settingRow?.value ?? "You are John Maclean, a motivational coach.";
+
+    const existingStonesText = data.existingStones && data.existingStones.length > 0
+      ? data.existingStones.map((s, i) => `  ${i + 1}. ${s.text}${s.metric ? ` (${s.metric})` : ""}${typeof s.target === "number" ? ` target ${s.target}${s.unit ? " " + s.unit : ""}${s.cadence ? " per " + s.cadence : ""}` : ""}`).join("\n")
+      : "(none)";
+
+    const userMessage =
+      `The user wants your help setting a proper goal. Coach them on GOAL-SETTING and MEASUREMENT only — nothing else.\n\n` +
+      `WHAT THEY WANT TO ACHIEVE:\n${data.intent}\n\n` +
+      `THEIR ROLE / CONTEXT:\n${data.role || "(not given)"}\n\n` +
+      `ANYTHING ELSE THEY SAID:\n${data.context || "(none)"}\n\n` +
+      `EXISTING BIG GOAL: ${data.existingBigGoal || "(none yet)"}\n` +
+      `EXISTING STONES:\n${existingStonesText}\n\n` +
+      `Your job: propose a clear, measurable big goal wording, and 3–5 concrete stones that would realistically get them there. For each stone, pick the right type:\n` +
+      `- "count" — a number they build up over a period (calls, sessions, kg). Needs target + unit + cadence.\n` +
+      `- "rate" — a percentage they report (close rate, on-time %). Needs target (%) + cadence.\n` +
+      `- "habit" — a yes/no thing they either did or didn't.\n\n` +
+      `Reply with ONE JSON object and nothing else, in this shape:\n` +
+      `{\n` +
+      `  "suggestedBigGoal": "specific, time-bound wording of the big goal",\n` +
+      `  "suggestedTargetDate": "YYYY-MM-DD or null",\n` +
+      `  "suggestedStones": [\n` +
+      `    { "text": "short stone name", "metric": "count"|"rate"|"habit", "target": number|null, "unit": "e.g. calls", "cadence": "day"|"week"|"month"|"quarter"|"" }\n` +
+      `  ],\n` +
+      `  "note": "your short coaching note in your voice — 2–4 sentences, Australian English, explaining why these stones and how to measure them. If their intent is outside goal-setting (e.g. life advice, relationships, career choice), say so in one line and steer back to what you CAN help with."\n` +
+      `}\n\n` +
+      `Rules for the stones you propose: each one must be something they can actually do this week; targets must be realistic for the cadence; prefer a mix of one supporting habit + a couple of counts/rates over five habits. Don't invent numbers you can't justify — if you're unsure of a target, put target=null and let them fill it in.\n\n` +
+      `Return the JSON object only. No preamble, no code fences.`;
+
+    let raw: string;
+    try {
+      raw = await callAnthropic({ apiKey, model: PRIMARY_MODEL, system: systemPrompt, userMessage, maxTokens: 1200 });
+    } catch {
+      try {
+        raw = await callAnthropic({ apiKey, model: FALLBACK_MODEL, system: systemPrompt, userMessage, maxTokens: 1200 });
+      } catch {
+        return {
+          suggestedBigGoal: "",
+          suggestedTargetDate: null as string | null,
+          suggestedStones: [] as SuggestedStone[],
+          note: "John couldn't get to this one — give it another go in a moment.",
+        };
+      }
+    }
+
+    const parsed = extractSuggestion(raw);
+    if (!parsed) {
+      return {
+        suggestedBigGoal: "",
+        suggestedTargetDate: null as string | null,
+        suggestedStones: [] as SuggestedStone[],
+        note: raw.slice(0, 1200),
+      };
+    }
+
+    const stones: SuggestedStone[] = Array.isArray(parsed.suggestedStones)
+      ? parsed.suggestedStones
+          .filter((s) => s && typeof s.text === "string" && s.text.trim().length > 0)
+          .slice(0, 8)
+          .map((s) => ({
+            text: String(s.text).trim().slice(0, 200),
+            metric: (s.metric === "count" || s.metric === "rate" || s.metric === "habit") ? s.metric : "habit",
+            target: typeof s.target === "number" && s.target > 0 ? s.target : null,
+            unit: typeof s.unit === "string" ? s.unit.trim().slice(0, 40) : "",
+            cadence: (s.cadence === "day" || s.cadence === "week" || s.cadence === "month" || s.cadence === "quarter") ? s.cadence : "",
+          }))
+      : [];
+
+    return {
+      suggestedBigGoal: typeof parsed.suggestedBigGoal === "string" ? parsed.suggestedBigGoal.trim().slice(0, 500) : "",
+      suggestedTargetDate: typeof parsed.suggestedTargetDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.suggestedTargetDate) ? parsed.suggestedTargetDate : null,
+      suggestedStones: stones,
+      note: typeof parsed.note === "string" ? parsed.note.trim().slice(0, 2000) : "",
+    };
   });

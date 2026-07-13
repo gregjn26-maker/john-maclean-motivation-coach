@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyGoal, saveMyGoal, reviewMyPlan } from "@/lib/goals.functions";
+import { getMyGoal, saveMyGoal, reviewMyPlan, suggestGoalPlan } from "@/lib/goals.functions";
 import { getMyProfile, saveMyName } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Play, Plus, X } from "lucide-react";
+import { Play, Plus, X, Sparkles } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 
 
@@ -60,6 +61,7 @@ function GoalsPage() {
   const fetchGoal = useServerFn(getMyGoal);
   const save = useServerFn(saveMyGoal);
   const review = useServerFn(reviewMyPlan);
+  const suggest = useServerFn(suggestGoalPlan);
   const fetchProfile = useServerFn(getMyProfile);
   const persistName = useServerFn(saveMyName);
 
@@ -73,6 +75,39 @@ function GoalsPage() {
   const [reviewMsg, setReviewMsg] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const stonesRef = useRef<HTMLElement | null>(null);
+
+  // "Help me set this goal" modal
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestIntent, setSuggestIntent] = useState("");
+  const [suggestRole, setSuggestRole] = useState("");
+  const [suggestContext, setSuggestContext] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<null | {
+    suggestedBigGoal: string;
+    suggestedTargetDate: string | null;
+    suggestedStones: Array<{ text: string; metric: "count" | "rate" | "habit"; target: number | null; unit: string; cadence: "day" | "week" | "month" | "quarter" | "" }>;
+    note: string;
+  }>(null);
+
+  // Plan strength (drives the button label and visibility)
+  const planStrength = useMemo(() => {
+    const filled = stones.filter((s) => s.text.trim().length > 0);
+    const n = filled.length;
+    const hasBigGoal = bigGoal.trim().length > 0;
+    if (!hasBigGoal && n === 0) return "empty" as const;
+    const measurable = filled.filter((s) => {
+      if (s.metric === "count" || s.metric === "rate") {
+        const t = Number(s.target);
+        return Number.isFinite(t) && t > 0;
+      }
+      return false;
+    }).length;
+    const avgLen = n > 0 ? filled.reduce((a, s) => a + s.text.trim().length, 0) / n : 0;
+    if (n >= 6 && measurable >= 2 && avgLen >= 20) return "solid" as const;
+    if (n < 3 || measurable < 1 || avgLen < 20) return "thin" as const;
+    return "solid" as const;
+  }, [bigGoal, stones]);
+
 
 
   useEffect(() => {
@@ -315,6 +350,44 @@ function GoalsPage() {
                 </div>
               </div>
             </section>
+
+            {/* Feature 3: "Help me set this goal" — state-aware CTA */}
+            {planStrength !== "solid" && (
+              <section
+                className="rounded-xl p-5 shadow-sm border"
+                style={{ backgroundColor: "#FFF4E8", borderColor: "#F4B400" }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-brand-orange text-white inline-flex items-center justify-center">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm font-semibold text-brand-navy">
+                      {planStrength === "empty"
+                        ? "Not sure where to start? Talk it through with John."
+                        : "Want John's help sharpening this?"}
+                    </p>
+                    <p className="text-xs text-brand-muted leading-snug">
+                      {planStrength === "empty"
+                        ? "Tell John what you want to achieve and your role. He'll suggest a big goal and a handful of stones you can measure — you decide what to keep."
+                        : "John can look at what's here and suggest a sharper big goal or a few more measurable stones. You still choose what to save."}
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setSuggestion(null);
+                        setSuggestOpen(true);
+                      }}
+                      className="bg-brand-navy text-white hover:opacity-90 h-10"
+                    >
+                      {planStrength === "empty" ? "Talk to John" : "Get John's help"}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+
 
             <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
               <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
@@ -576,6 +649,197 @@ function GoalsPage() {
           </form>
         )}
       </div>
+
+      {/* Feature 3: "Help me set this goal" — modal */}
+      <Dialog open={suggestOpen} onOpenChange={(open) => { if (!suggesting) setSuggestOpen(open); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-brand-navy">
+              {suggestion ? "John's take" : "Talk it through with John"}
+            </DialogTitle>
+            <DialogDescription>
+              {suggestion
+                ? "Have a look — apply what's useful, ignore what's not. You still edit and save your own plan."
+                : "Tell John what you're aiming at and a bit about your role. He'll suggest a big goal and a few measurable stones."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!suggestion && (
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1.5">
+                <Label className="text-sm">What do you want to achieve?</Label>
+                <Textarea
+                  rows={3}
+                  value={suggestIntent}
+                  onChange={(e) => setSuggestIntent(e.target.value)}
+                  placeholder="e.g. Grow my consulting revenue to $250k next year."
+                  className="text-base resize-none"
+                  maxLength={2000}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Your role / context <span className="text-muted-foreground">(optional)</span></Label>
+                <Input
+                  value={suggestRole}
+                  onChange={(e) => setSuggestRole(e.target.value)}
+                  placeholder="e.g. Solo B2B consultant, 8 years in"
+                  className="text-base h-11"
+                  maxLength={500}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Anything else John should know? <span className="text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  rows={2}
+                  value={suggestContext}
+                  onChange={(e) => setSuggestContext(e.target.value)}
+                  placeholder="e.g. I struggle to measure the right things — I know I need to prospect more."
+                  className="text-base resize-none"
+                  maxLength={2000}
+                />
+              </div>
+            </div>
+          )}
+
+          {suggestion && (
+            <div className="space-y-3 pt-1">
+              {suggestion.note && (
+                <div
+                  className="rounded-lg p-3 text-sm leading-relaxed text-coach-panel-foreground"
+                  style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}
+                >
+                  <div className="text-xs font-semibold text-brand-navy uppercase tracking-wide mb-1">John</div>
+                  <p className="whitespace-pre-wrap">{suggestion.note}</p>
+                </div>
+              )}
+              {suggestion.suggestedBigGoal && (
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-brand-muted">Suggested big goal</div>
+                  <p className="text-sm text-brand-text mt-1">{suggestion.suggestedBigGoal}</p>
+                  {suggestion.suggestedTargetDate && (
+                    <p className="text-xs text-brand-muted mt-0.5">Target: {suggestion.suggestedTargetDate}</p>
+                  )}
+                </div>
+              )}
+              {suggestion.suggestedStones.length > 0 && (
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-brand-muted mb-2">Suggested stones</div>
+                  <ul className="space-y-1.5">
+                    {suggestion.suggestedStones.map((s, i) => (
+                      <li key={i} className="text-sm text-brand-text">
+                        <span className="font-medium">{s.text}</span>
+                        <span className="text-xs text-brand-muted ml-2">
+                          [{s.metric}
+                          {s.target !== null ? `, target ${s.target}${s.unit ? " " + s.unit : ""}` : ""}
+                          {s.cadence ? ` per ${s.cadence}` : ""}]
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            {!suggestion && (
+              <>
+                <Button type="button" variant="outline" onClick={() => setSuggestOpen(false)} disabled={suggesting}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={suggesting || suggestIntent.trim().length < 3}
+                  onClick={async () => {
+                    setSuggesting(true);
+                    try {
+                      const cleanedExisting = stones
+                        .filter((s) => s.text.trim().length > 0)
+                        .map((s) => {
+                          const n = Number(s.target);
+                          const hasTarget = Number.isFinite(n) && n > 0;
+                          return {
+                            text: s.text.trim(),
+                            metric: s.metric,
+                            target: hasTarget ? n : null,
+                            unit: s.unit.trim().slice(0, 40),
+                            cadence: s.metric === "habit" ? ("" as const) : s.cadence,
+                            numerator_label: s.numerator_label,
+                            denominator_label: s.denominator_label,
+                          };
+                        });
+                      const res = await suggest({
+                        data: {
+                          intent: suggestIntent.trim(),
+                          role: suggestRole.trim(),
+                          context: suggestContext.trim(),
+                          existingBigGoal: bigGoal.trim(),
+                          existingStones: cleanedExisting,
+                        },
+                      });
+                      setSuggestion(res);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Couldn't reach John.");
+                    } finally {
+                      setSuggesting(false);
+                    }
+                  }}
+                  className="bg-brand-orange text-white hover:opacity-90"
+                >
+                  {suggesting ? "John's thinking…" : "Ask John"}
+                </Button>
+              </>
+            )}
+            {suggestion && (
+              <>
+                <Button type="button" variant="outline" onClick={() => { setSuggestion(null); }}>
+                  Ask again
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    // Apply into the form. Does NOT save.
+                    if (suggestion.suggestedBigGoal && !bigGoal.trim()) {
+                      setBigGoal(suggestion.suggestedBigGoal);
+                    } else if (suggestion.suggestedBigGoal) {
+                      setBigGoal(suggestion.suggestedBigGoal);
+                    }
+                    if (suggestion.suggestedTargetDate && !targetDate) {
+                      setTargetDate(suggestion.suggestedTargetDate);
+                    }
+                    if (suggestion.suggestedStones.length > 0) {
+                      const applied: StoneForm[] = suggestion.suggestedStones.map((s) => ({
+                        text: s.text,
+                        metric: s.metric,
+                        target: s.target !== null ? String(s.target) : "",
+                        unit: s.unit,
+                        cadence: (s.cadence === "" ? "day" : s.cadence) as Cadence,
+                        numerator_label: "",
+                        denominator_label: "",
+                      }));
+                      const existingFilled = stones.filter((s) => s.text.trim().length > 0);
+                      setStones(existingFilled.length > 0 ? [...existingFilled, ...applied] : applied);
+                    }
+                    setSuggestOpen(false);
+                    setSuggestion(null);
+                    setSuggestIntent("");
+                    setSuggestRole("");
+                    setSuggestContext("");
+                    toast.success("Added to your plan. Tweak and Save when you're happy.");
+                    setTimeout(() => {
+                      document.getElementById("stones-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
+                  className="bg-brand-orange text-white hover:opacity-90"
+                >
+                  Apply to my plan
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
+
