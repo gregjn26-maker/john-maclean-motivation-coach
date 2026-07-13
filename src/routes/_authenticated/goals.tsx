@@ -61,6 +61,7 @@ function GoalsPage() {
   const fetchGoal = useServerFn(getMyGoal);
   const save = useServerFn(saveMyGoal);
   const review = useServerFn(reviewMyPlan);
+  const suggest = useServerFn(suggestGoalPlan);
   const fetchProfile = useServerFn(getMyProfile);
   const persistName = useServerFn(saveMyName);
 
@@ -74,6 +75,39 @@ function GoalsPage() {
   const [reviewMsg, setReviewMsg] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const stonesRef = useRef<HTMLElement | null>(null);
+
+  // "Help me set this goal" modal
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestIntent, setSuggestIntent] = useState("");
+  const [suggestRole, setSuggestRole] = useState("");
+  const [suggestContext, setSuggestContext] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<null | {
+    suggestedBigGoal: string;
+    suggestedTargetDate: string | null;
+    suggestedStones: Array<{ text: string; metric: "count" | "rate" | "habit"; target: number | null; unit: string; cadence: "day" | "week" | "month" | "quarter" | "" }>;
+    note: string;
+  }>(null);
+
+  // Plan strength (drives the button label and visibility)
+  const planStrength = useMemo(() => {
+    const filled = stones.filter((s) => s.text.trim().length > 0);
+    const n = filled.length;
+    const hasBigGoal = bigGoal.trim().length > 0;
+    if (!hasBigGoal && n === 0) return "empty" as const;
+    const measurable = filled.filter((s) => {
+      if (s.metric === "count" || s.metric === "rate") {
+        const t = Number(s.target);
+        return Number.isFinite(t) && t > 0;
+      }
+      return false;
+    }).length;
+    const avgLen = n > 0 ? filled.reduce((a, s) => a + s.text.trim().length, 0) / n : 0;
+    if (n >= 6 && measurable >= 2 && avgLen >= 20) return "solid" as const;
+    if (n < 3 || measurable < 1 || avgLen < 20) return "thin" as const;
+    return "solid" as const;
+  }, [bigGoal, stones]);
+
 
 
   useEffect(() => {
