@@ -351,6 +351,44 @@ function GoalsPage() {
               </div>
             </section>
 
+            {/* Feature 3: "Help me set this goal" — state-aware CTA */}
+            {planStrength !== "solid" && (
+              <section
+                className="rounded-xl p-5 shadow-sm border"
+                style={{ backgroundColor: "#FFF4E8", borderColor: "#F4B400" }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-brand-orange text-white inline-flex items-center justify-center">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm font-semibold text-brand-navy">
+                      {planStrength === "empty"
+                        ? "Not sure where to start? Talk it through with John."
+                        : "Want John's help sharpening this?"}
+                    </p>
+                    <p className="text-xs text-brand-muted leading-snug">
+                      {planStrength === "empty"
+                        ? "Tell John what you want to achieve and your role. He'll suggest a big goal and a handful of stones you can measure — you decide what to keep."
+                        : "John can look at what's here and suggest a sharper big goal or a few more measurable stones. You still choose what to save."}
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setSuggestion(null);
+                        setSuggestOpen(true);
+                      }}
+                      className="bg-brand-navy text-white hover:opacity-90 h-10"
+                    >
+                      {planStrength === "empty" ? "Talk to John" : "Get John's help"}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+
+
             <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
               <div className="border-l-4 pl-3" style={{ borderColor: "#F4B400" }}>
                 <h2 className="text-base font-semibold text-brand-navy">Your name</h2>
