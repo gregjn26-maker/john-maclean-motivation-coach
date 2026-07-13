@@ -428,7 +428,8 @@ function HomePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm text-brand-text">Anything else you're doing towards this goal — or want John's take on how you're measuring it?</Label>
+              <Label className="text-sm font-semibold text-brand-text">Chat about your goals</Label>
+              <p className="text-xs text-brand-muted leading-snug">Anything else you're doing towards this goal — or want John's take on how you're measuring it?</p>
               <Textarea
                 rows={2}
                 placeholder="Other efforts, or ask John about your stones, targets, or how to measure progress."
