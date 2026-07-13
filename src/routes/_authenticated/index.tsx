@@ -406,17 +406,6 @@ function HomePage() {
               The more detail you give me — how it felt, the specifics, the numbers — the more useful my coaching gets. Little details are the stones that add up.
             </p>
             <div className="space-y-1.5">
-              <Label className="text-sm text-brand-text">Anything else you're doing towards this goal — or want John's take on how you're measuring it?</Label>
-              <Textarea
-                rows={2}
-                placeholder="Other efforts, or ask John about your stones, targets, or how to measure progress."
-                value={goals}
-                onChange={(e) => setGoals(e.target.value)}
-                className="text-base resize-none border-border focus-visible:ring-brand-orange"
-              />
-            </div>
-
-            <div className="space-y-1.5">
               <Label className="text-sm font-semibold text-brand-green">Wins</Label>
               <Textarea
                 rows={3}
@@ -437,6 +426,18 @@ function HomePage() {
                 className="text-base resize-none border-2 border-brand-red/40 focus-visible:border-brand-red focus-visible:ring-0"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm text-brand-text">Anything else you're doing towards this goal — or want John's take on how you're measuring it?</Label>
+              <Textarea
+                rows={2}
+                placeholder="Other efforts, or ask John about your stones, targets, or how to measure progress."
+                value={goals}
+                onChange={(e) => setGoals(e.target.value)}
+                className="text-base resize-none border-border focus-visible:ring-brand-orange"
+              />
+            </div>
+
 
 
             <div className="space-y-2">
