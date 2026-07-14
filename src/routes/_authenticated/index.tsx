@@ -513,7 +513,7 @@ function HomePage() {
                       weekday: "short", day: "numeric", month: "short",
                     })}
                   </div>
-                  <HistoryLine label="Goals" value={h.goals} />
+                  <HistoryLine label="Chat about your goals" value={h.goals} />
                   <HistoryLine label="Wins" value={h.wins} valueClass="text-brand-green" />
                   <HistoryLine label="Misses" value={h.misses} valueClass="text-brand-red" />
                   {h.reply && (
