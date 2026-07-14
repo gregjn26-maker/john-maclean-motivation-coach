@@ -786,7 +786,7 @@ function GoalsPage() {
                   }}
                   className="bg-brand-orange text-white hover:opacity-90"
                 >
-                  {suggesting ? "John's thinking…" : "Ask John"}
+                  {suggesting ? "Thinking…" : "Get suggestions"}
                 </Button>
               </>
             )}
