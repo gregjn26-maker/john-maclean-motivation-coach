@@ -305,32 +305,21 @@ function GoalsPage() {
         ) : (
           <form onSubmit={onSubmit} className="space-y-6 text-left">
 
-            {/* Setup explainer */}
+            {/* Setup explainer — John's intro monologue */}
             <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
               <div className="space-y-3 text-sm text-card-foreground leading-relaxed">
-                <p className="font-semibold text-brand-navy">G&apos;day. Before you start, let me explain how this works — because how you set it up decides how useful it&apos;ll be.</p>
-                <p>Everything here runs on one idea I&apos;ve lived by: a big goal, reached one stone further than yesterday. So we start with your big goal — the thing you&apos;re actually chasing this quarter or this year. Write it plainly. That&apos;s your finish line.</p>
-                <p>Then we break it into stones — the small, trackable steps that get you there. Every stone is one of just two types, and picking the right one is what makes your progress page actually mean something.</p>
-                <p>The first type is a <span className="font-semibold">count-up</span> — a number you build up over a period. &quot;Make 20 calls a week.&quot; &quot;Book 5 demos a week.&quot; &quot;Three training days.&quot; Anything where more is better and you&apos;re stacking them up. Always phrase it as the positive — not &quot;days I didn&apos;t slip,&quot; but &quot;days I trained.&quot; More is always good.</p>
-                <p>The second type is a <span className="font-semibold">level you report</span> — a number that isn&apos;t about adding up, it&apos;s about where you sit right now. &quot;Close rate above 30%.&quot; &quot;Current weight.&quot; &quot;Year-to-date margin.&quot; You&apos;re not counting these up each time; you&apos;re reporting where the dial is. Some you want going up, some down — the app handles that, you just tell it.</p>
-                <p>So as you add each stone, ask yourself: am I counting something up, or reporting where a number sits? Get that right and your progress page tells you the truth at a glance.</p>
-                <p>Then it&apos;s simple: each morning you check in — your wins, your misses, how it went — and you update your stones. That daily honesty is the whole game. Not the grand plan. The check-in.</p>
-                <p>One last thing, and it&apos;s the one that matters most: don&apos;t set this and forget it. I never got out of that wheelchair by writing a goal on a wall and walking away. I got there by turning up every single day and moving the stone a little further. This app only works if you do. So set it up properly now — then show up tomorrow. How far can you go?</p>
-              </div>
-            </section>
-
-            {/* Coaching intro */}
-            <section className="rounded-xl p-5 space-y-3 shadow-sm" style={{ backgroundColor: "#FFF4E8", borderLeft: "4px solid #F4B400" }}>
-              <div className="flex items-start gap-3">
-                <JMAvatar />
-                <div className="space-y-2 text-sm text-coach-panel-foreground leading-relaxed">
-                  <p>
-                    Here's something I learned the hard way. When I was learning to walk again, my neighbour Mr Brown would come out each afternoon and ask, "What's our goal today?" The goal was a power pole up the street — and I couldn't reach it. So we'd put a stone down where I got to that day, and the next day move it a little further. Slowly that stone walked its way up to the pole. That's how every big goal actually gets done — not in one leap, but one stone further than yesterday.
-                  </p>
-                  <p>
-                    So set your big goal — that's your pole. Then break it into as many small, achievable stones as you can: the daily and weekly wins you can actually tick off. Hit enough of them, and one day you'll look up and the pole will be right there. Where's your pole — and where will you put your first stone today?
-                  </p>
-                </div>
+                <p className="font-semibold text-brand-navy">G&apos;day. Before you start, let me tell you how this works — because how you set it up decides how much it&apos;ll help you.</p>
+                <p>Let me tell you a quick story first. When I was learning to walk again, my neighbour, Mr Brown, would come out every afternoon and ask me, &quot;What&apos;s our goal today?&quot; The goal was a power pole up the street. And I couldn&apos;t reach it. So each day, we&apos;d put a stone down where I got to — and the next day, we&apos;d move it a little further. Slowly, that stone made its way up the street, until one day it reached the pole. That&apos;s how every big goal actually gets done. Not in one leap. One stone further than yesterday.</p>
+                <p>So that&apos;s how this app works. First, you set your big goal — that&apos;s your pole. The thing you&apos;re really chasing this quarter, or this year. Write it down plainly. That&apos;s your finish line.</p>
+                <p>Then we break it into stones — the small, trackable steps that get you there. Every stone is one of just two types, and picking the right one matters.</p>
+                <p>The first type is a <span className="font-semibold">count-up</span>. That&apos;s a number you build up over time. Make twenty calls a week. Book five demos a week. Three training days. Anything where more is better and you&apos;re stacking them up. Always say it as the positive — not the days you slipped, but the days you showed up.</p>
+                <p>The second type is a <span className="font-semibold">level you report</span>. That&apos;s a number that&apos;s about where you sit right now, not about adding up. Your close rate. Your current weight. Your margin so far this year. You&apos;re not counting these up — you&apos;re telling the app where the dial is sitting. Some you want going up, some going down. The app handles that. You just report it.</p>
+                <p>So as you add each stone, ask yourself one thing: am I counting something up, or reporting where a number sits? Get that right, and your progress page will tell you the truth at a glance.</p>
+                <p>After that, it&apos;s simple. Each morning, you check in. Your wins, your misses, how it went — and you update your stones. That daily honesty is the whole game. Not the grand plan. The check-in.</p>
+                <p>And here&apos;s the one that matters most. Don&apos;t set this up and forget it. I never got out of that wheelchair by writing a goal on a wall and walking away. I got there by turning up every single day and moving the stone a little further. This app only works if you do.</p>
+                <p>So set your big goal — that&apos;s your pole. Break it into as many small stones as you can. The daily and weekly wins you can actually tick off. Hit enough of them, and one day you&apos;ll look up, and the pole will be right there.</p>
+                <p>So — set it up properly now. Then show up tomorrow.</p>
+                <p className="font-semibold text-brand-navy">How far can you go?</p>
               </div>
             </section>
 
