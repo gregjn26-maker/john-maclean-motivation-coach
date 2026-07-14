@@ -655,12 +655,12 @@ function GoalsPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-brand-navy">
-              {suggestion ? "John's take" : "Talk it through with John"}
+              {suggestion ? "John's AI coach take" : "Talk it through with John's AI coach"}
             </DialogTitle>
             <DialogDescription>
               {suggestion
                 ? "Have a look — apply what's useful, ignore what's not. You still edit and save your own plan."
-                : "Tell John what you're aiming at and a bit about your role. He'll suggest a big goal and a few measurable stones."}
+                : "This is John's AI coach — trained on his story and approach. Tell it what you're aiming at and a bit about your role, and it'll suggest a big goal and a few measurable stones."}
             </DialogDescription>
           </DialogHeader>
 
@@ -786,7 +786,7 @@ function GoalsPage() {
                   }}
                   className="bg-brand-orange text-white hover:opacity-90"
                 >
-                  {suggesting ? "John's thinking…" : "Ask John"}
+                  {suggesting ? "Thinking…" : "Get suggestions"}
                 </Button>
               </>
             )}
